@@ -301,6 +301,21 @@ body.modo-now #sideCol{display:none}
 /* ---------- archivo ---------- */
 .arch{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:12px;color:var(--mut)}
 .arch.drop{border-color:var(--grn);background:var(--grnbg)}
+/* destinos para arrastrar en la vista Por bloque */
+.dests{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.dchipB{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--mut);border:1px dashed var(--line2);
+ border-radius:9px;padding:4px 9px;background:var(--card)}
+.dchipB.caj{background:var(--soft)}
+.dchipB.over{border-style:solid;border-color:var(--acc);color:var(--acctx);background:var(--accbg)}
+/* bloque aparte, en la columna lateral: una columna, letra más chica */
+.blksel{font-size:11px;color:var(--txt);background:#fff;border:1px solid var(--line2);border-radius:7px;padding:3px 6px;
+ font-family:inherit;max-width:100%}
+.sideblk .sgh{font-size:9px;margin-top:8px}
+.sideblk .t{min-height:32px;padding:4px 2px 4px 9px;gap:6px}
+.sideblk .nm b{font-size:11px}
+.sideblk .tim,.sideblk .tipo{font-size:9px}
+.sideblk .dt{font-size:9.5px}
+.sideblk .up{transform:scale(.85)}
 .arow{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:11.5px}
 .arow .atx{flex:1;min-width:0;text-decoration:line-through;opacity:.55;word-break:break-word}
 
@@ -407,6 +422,7 @@ body.modo-now #sideCol{display:none}
   <div id="sideCol">
     <div class="pnl" id="dateBox"></div>
     <div class="pnl" id="recBox"></div>
+    <div class="pnl" id="blkBox"></div>
     <div class="pnl" id="delegBox"></div>
   </div>
 </div>
@@ -626,7 +642,7 @@ let cloudBusy=false,pushTimer=null,dirty=false;
    el celular (que suele tener todo plegado) le cerraría los bloques a la compu. */
 const UIKEYS=['agenda_synccode','agenda_remote_ts','agenda_open_v1','agenda_view_v1',
               'agenda_panels_v1','agenda_archopen','agenda_width_v1','agenda_focusopen','agenda_focuscol',
-              'agenda_shortview'];
+              'agenda_shortview','agenda_sideblk_v1'];
 function esUI(k){return UIKEYS.indexOf(k)>=0;}
 function localBlob(){const o={};Object.keys(localStorage).forEach(k=>{if(k.indexOf('agenda_')===0&&!esUI(k))o[k]=localStorage.getItem(k);});return o;}
 function schedulePush(){if(!syncCode)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>syncCycle(),1500);}
@@ -762,6 +778,9 @@ function tgCol(taskId){const t=tagDe(taskId);const c=t?tagPal(t):TGGRIS;
 /* solo la inicial, para la matriz */
 function tgIniHTML(taskId){const t=tagDe(taskId);if(!t)return"";const c=tagPal(t);
  return `<span class="tgi" style="background:${c.bg};color:${c.tx}" title="${esc(t.n)}">${esc(tagIni(t))}</span>`;}
+/* inicial con lugar fijo, para paneles angostos. Sin etiqueta = pastilla gris con guion. */
+function tgIniSlot(taskId){const t=tagDe(taskId);const c=t?tagPal(t):TGGRIS;
+ return `<span class="tgi" style="background:${c.bg};color:${c.tx}" title="${t?esc(t.n):'sin etiqueta'}">${t?esc(tagIni(t)):'–'}</span>`;}
 /* pastilla normal, para la lista corta. Si no tiene etiqueta no pinta nada. */
 function tgPill(taskId){const t=tagDe(taskId);if(!t)return"";const c=tagPal(t);
  return `<span class="tipo" style="background:${c.bg};color:${c.tx}">${esc(t.n)}</span>`;}
@@ -934,18 +953,32 @@ function sinHoraDrop(ev){ev.preventDefault();ev.currentTarget.classList.remove('
  if(sDrag==null)return;const j=sDrag;sDrag=null;setHora(j,'');}
 
 /* ---------- arrastrar a otro bloque en la vista Por bloque ---------- */
-function grpDrop(ev,areaKey){ev.preventDefault();ev.currentTarget.classList.remove('over');
- if(sDrag==null)return;const e=short[sDrag];if(!e)return;
- if(e.free){promIdx=sDrag;sDrag=null;
-   const a=areaByKey(areaKey);const sg=sgNames(a)[0];
-   const id=areaKey+"|c|"+Date.now();custom.push({id,area:areaKey,sg,t:e.t});
-   if(e.done)state[id]=true;short[promIdx]={id:id};promIdx=null;openAreas[areaKey]=true;save();render();return;}
- if(areaKey==='__libres'){sDrag=null;return;}
- const tk=tkById(e.id);if(!tk){sDrag=null;return;}
- const a=areaByKey(areaKey);const sg=sgNames(a)[0];
+function grpDrop(ev,areaKey){ev.preventDefault();ev.stopPropagation();ev.currentTarget.classList.remove('over');
+ if(sDrag==null)return;const i=sDrag;sDrag=null;
+ if(areaKey==='__libres')return;
+ moverABloque(i,areaKey);}
+/* el renglón de la lista corta número i se va al bloque (primera sección) */
+function moverABloque(i,areaKey){const e=short[i];if(!e)return;const a=areaByKey(areaKey);if(!a)return;
+ const sg=sgNames(a)[0];
+ if(e.free){const id=areaKey+"|c|"+Date.now();custom.push({id,area:areaKey,sg,t:e.t});
+   if(e.done)state[id]=true;short[i]={id:id};save();render();return;}
+ const tk=tkById(e.id);if(!tk)return;
  if(tk.id.includes('|c|')){const cc=custom.find(x=>x.id===tk.id);if(cc){cc.area=areaKey;cc.sg=sg;}delete areaOv[tk.id];delete sgOv[tk.id];}
  else{areaOv[tk.id]=areaKey;sgOv[tk.id]=sg;}
- sDrag=null;save();render();}
+ save();render();}
+/* soltar sobre un renglón: si es de otro bloque, se muda a ese bloque; si es del mismo, se reordena */
+function blqRowDrop(ev,i,k){ev.preventDefault();ev.stopPropagation();ev.currentTarget.classList.remove('over');
+ if(sDrag==null||sDrag===i)return;
+ const f=datosFila(short[sDrag]);const kd=f&&f.area?f.area.key:'__libres';
+ if(kd!==k){const j=sDrag;sDrag=null;if(k!=='__libres')moverABloque(j,k);return;}
+ sDrop(ev);}
+/* al cajón desde la lista corta. Un pendiente suelto se vuelve tarea de Sin clasificar y se guarda. */
+function archivarCorta(i){const e=short[i];if(!e)return;let id=e.id;
+ if(e.free){id="inbox|c|"+Date.now();custom.push({id,area:"inbox",sg:"Por clasificar",t:e.t});
+   if(e.done)state[id]=true;}
+ archived[id]=Date.now();short.splice(i,1);save();render();}
+function cajonDrop(ev){ev.preventDefault();ev.stopPropagation();ev.currentTarget.classList.remove('over');
+ if(sDrag==null)return;const i=sDrag;sDrag=null;archivarCorta(i);}
 
 /* ---------- editor rápido dentro de la lista ---------- */
 let qeOpen=null, qeHora=null;
@@ -1001,7 +1034,8 @@ function pastillaCuando(n){
 function filaCorta(e,i,opts){
  const f=datosFila(e);if(!f)return"";
  const gris=(opts.gris&&i>=TOPE)?'faded':'';
- const reord=opts.reordena?` ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="sDrop(event)"`:
+ const reord=opts.grupo?` ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="blqRowDrop(event,${i},'${opts.grupo}')"`:
+             opts.reordena?` ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="sDrop(event)"`:
              (opts.soltarHora?` ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="hrDrop(event,${i})"`:'');
  let h=`<div class="lcrow ${gris} ${f.hecho?'done':''}" draggable="true" data-i="${i}" ondragstart="sDragStart(event)" ondragend="sDragEnd(event)"${reord}>`;
  h+=`<span class="grip">⠿</span>`;
@@ -1042,8 +1076,12 @@ function vistaBloque(){
    r+=`<div class="grpH" style="color:${c.tx};border-bottom-color:${c.sol}" ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="grpDrop(event,'${k}')">`+
       `<span class="gdot" style="background:${c.sol}"></span>${esc(g.area?g.area.name:'Pendientes sueltos')}`+
       `<span class="gn">${g.items.length}</span></div>`;
-   g.items.forEach(({e,i})=>{r+=filaCorta(e,i,{reordena:1,hora:false});});});
- return r+`<div class="lcempty" style="margin-top:8px">Arrastra una tarea al título de otro bloque para moverla ahí.</div>`;}
+   g.items.forEach(({e,i})=>{r+=filaCorta(e,i,{grupo:k,hora:false});});});
+ /* destinos fijos: todos los bloques (aunque no tengan nada aquí) y el cajón */
+ const dest=areas().filter(a=>!hiddenB[a.key]).map(a=>{const c=colOf(a);
+   return `<span class="dchipB" ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="grpDrop(event,'${a.key}')"><span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}</span>`;}).join('')+
+   `<span class="dchipB caj" ondragover="sDragOver(event)" ondragleave="sDragLeave(event)" ondrop="cajonDrop(event)">🗃 al cajón</span>`;
+ return r+`<div class="lcempty" style="margin-top:10px">Arrastra una tarea a otro bloque, arriba o aquí abajo. Al cajón se va aunque no tenga bloque.</div><div class="dests">${dest}</div>`;}
 function vistaMatriz(){
  const Q=[
   {t:'Hazlo ya',        d:'urgente e importante',  bg:'var(--danbg)', tx:'var(--dantx)', items:[]},
@@ -1115,7 +1153,7 @@ function renderFoco(){
      total+=items.length;
      const label=labelOv[k+'|'+sg]||sg;
      cols+=`<div class="sgcol"><span class="sgh" style="background:${c.bg};color:${c.tx}">${esc(label)}</span>`+
-       (items.length?items.map(tk=>renglonHTML(tk)).join(''):`<div class="lcempty" style="padding:6px 0">—</div>`)+
+       (items.length?items.map(tk=>renglonHTML(tk,{ini:1})).join(''):`<div class="lcempty" style="padding:6px 0">—</div>`)+
        `</div>`;});
    cuerpo+=`<div class="fsec"><div class="grpH" style="color:${c.tx};border-bottom-color:${c.sol}">`+
      `<span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}</div>`+
@@ -1277,7 +1315,8 @@ function tasksFor(areaKey,sg){
  all.sort((a,b)=>{let ia=ord.indexOf(a.id),ib=ord.indexOf(b.id);if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;});
  return all;
 }
-function renglonHTML(tk){
+/* o.ini = etiqueta solo con su inicial (en paneles angostos) */
+function renglonHTML(tk,o){
  const hecho=!!state[tk.id];const d=dateOf(tk);const n=d?dayDiff(d):null;
  const di=durOf(tk.id);const dur=di>=0?DUR[di]:null;
  const u=hecho?"":urgCls(n);
@@ -1297,7 +1336,7 @@ function renglonHTML(tk){
    (dur?`<span class="fdur" style="height:${dur.h}px;background:${dur.c}"></span>`:"")+
    `<span class="grip">⠿</span>`+
    `<span class="tck ${hecho?'on':''}" onclick="chkToggle(event,'${tk.id}')">${hecho?'✓':''}</span>`+
-   tgCol(tk.id)+
+   (o&&o.ini?tgIniSlot(tk.id):tgCol(tk.id))+
    `<span class="nm"><b>${esc(txtOf(tk))}</b>${sub}</span>${der}`+
    `<button class="up ${enCorta(tk.id)?'on':''}" title="Subir a lo que importa ahorita" onclick="toggleCorta(event,'${tk.id}')">↑</button>${borrar}</div>`;
 }
@@ -1427,6 +1466,28 @@ function renderRec(){
    rows+=`<div class="prow ${hecho?'done':''}"><span class="pdot" style="background:${c.sol}"></span><span class="pt" onclick="openDetail(event,'${tk.id}')">${esc(txtOf(tk))}</span><span class="pw">${d?esc(dLabel(d)):'sin fecha'} · ${rep}</span></div>`;});
  box.innerHTML=`<div class="pnlh" onclick="togglePanel('rec')"><span class="ph" style="background:var(--grnbg);color:var(--grntx)">Recurrentes</span><span class="n">${list.length}</span><span class="ar">${abierto?'▾':'▸'}</span></div>${rows}`;
 }
+/* bloque aparte: el que elijas, completo, en una sola columna. La elección es de cada dispositivo. */
+let sideBlk=localStorage.getItem('agenda_sideblk_v1')||'';
+function setSideBlk(k){sideBlk=k;localStorage.setItem('agenda_sideblk_v1',k);render();}
+function renderSideBlk(){
+ const box=document.getElementById('blkBox');
+ const a=sideBlk?areaByKey(sideBlk):null;const ok=a&&!deletedAreas[a.key];
+ let opts=`<option value="">— elige un bloque —</option>`;
+ areas().forEach(x=>{opts+=`<option value="${x.key}" ${ok&&x.key===a.key?'selected':''}>${esc(x.name)}</option>`;});
+ const sel=`<select class="blksel" onclick="event.stopPropagation()" onchange="setSideBlk(this.value)">${opts}</select>`;
+ const abierto=panelAbierto('blk');
+ const c=ok?colOf(a):{bg:'var(--soft)',tx:'var(--mut)'};
+ let cuerpo="",n=0;
+ if(ok){
+   sgNames(a).forEach(sg=>{const items=tasksFor(a.key,sg);n+=items.filter(t=>!state[t.id]).length;
+     if(!abierto)return;
+     cuerpo+=`<span class="sgh" style="background:${c.bg};color:${c.tx}">${esc(labelOv[a.key+'|'+sg]||sg)}</span>`+
+       (items.length?items.map(tk=>renglonHTML(tk,{ini:1})).join(''):`<div class="lcempty" style="padding:4px 0">—</div>`);});
+ }else if(abierto)cuerpo=`<div class="lcempty">Elige arriba qué bloque quieres ver aquí.</div>`;
+ box.innerHTML=`<div class="pnlh" onclick="togglePanel('blk')"><span class="ph" style="background:${c.bg};color:${c.tx}">${ok?esc(a.name):'Bloque aparte'}</span>`+
+   (ok?`<span class="n">${n}</span>`:'')+`<span class="ar">${abierto?'▾':'▸'}</span></div>`+
+   (abierto?`<div style="margin-bottom:4px">${sel}</div><div class="sideblk">${cuerpo}</div>`:'');
+}
 function renderDeleg(){
  const box=document.getElementById('delegBox');
  if(hiddenB['deleg']){box.style.display='none';return;}
@@ -1439,7 +1500,9 @@ function renderDeleg(){
 }
 function renderArch(){
  const box=document.getElementById('archBox');let rows="";let n=0;
- TK().forEach(tk=>{if(!archived[tk.id])return;n++;const a=areaObjOf(tk);
+ /* lo más reciente arriba. Las viejas (guardadas antes de tener fecha) van al final. */
+ const cuando=id=>typeof archived[id]==='number'?archived[id]:0;
+ TK().filter(tk=>archived[tk.id]).sort((a,b)=>cuando(b.id)-cuando(a.id)).forEach(tk=>{n++;const a=areaObjOf(tk);
    rows+=`<div class="arow"><span class="atx">${esc(txtOf(tk))}</span><span class="pw">${esc(a.name)}</span><button class="mini" onclick="unarch('${tk.id}')">regresar</button></div>`;});
  box.innerHTML=`<div style="cursor:pointer" onclick="toggleArch()"><span class="ar">${archOpen?'▾':'▸'}</span> Hechas guardadas <span style="color:var(--hint)">${n}</span>`+
   `<span style="color:var(--hint);font-size:10.5px"> · arrastra aquí lo que no quieras ver</span></div>`+(archOpen?(rows||'<div class="lcempty">Nada guardado todavía.</div>'):"");
@@ -1461,7 +1524,7 @@ function hideBlock(ev,k){ev.stopPropagation();hiddenB[k]=true;save();render();}
 function showBlock(k){delete hiddenB[k];save();render();}
 function delArea(ev,k){ev.stopPropagation();if(!confirm('¿Ocultar este bloque para siempre? Sus tareas dejan de verse.'))return;deletedAreas[k]=true;save();render();}
 function toggleArch(){archOpen=!archOpen;localStorage.setItem("agenda_archopen",archOpen?"1":"0");render();}
-function archIt(ev,id){if(ev)ev.stopPropagation();archived[id]=true;
+function archIt(ev,id){if(ev)ev.stopPropagation();archived[id]=Date.now();
  short=short.filter(e=>e.free||e.id!==id);        // al cajón = fuera de la lista corta
  save();render();}
 function unarch(id){delete archived[id];save();render();}
@@ -1520,7 +1583,9 @@ function sgDrop(e){e.preventDefault();e.currentTarget.classList.remove('drop');
  areaOrder[area]=ord;save();render();}
 function archOver(e){e.preventDefault();e.currentTarget.classList.add('drop');}
 function archLeave(e){e.currentTarget.classList.remove('drop');}
-function archDrop(e){e.preventDefault();e.currentTarget.classList.remove('drop');if(!tDrag)return;archived[tDrag]=true;short=short.filter(x=>x.free||x.id!==tDrag);save();render();}
+function archDrop(e){e.preventDefault();e.currentTarget.classList.remove('drop');
+ if(sDrag!=null){const i=sDrag;sDrag=null;archivarCorta(i);return;}   // viene de la lista corta
+ if(!tDrag)return;archived[tDrag]=Date.now();short=short.filter(x=>x.free||x.id!==tDrag);save();render();}
 
 /* =======================================================================
    MODAL DE DETALLE — dos pestañas
@@ -1775,7 +1840,7 @@ function setMode(m){viewMode=m;
  localStorage.setItem(VMKEY,m);dirty=true;schedulePush();render();
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=='now')return;renderCd();renderDays();renderEnergy();renderStreak();}
-function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderDeleg();renderArch();}
+function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
 function render(){TKCACHE=null;tgWidth();renderShort();renderFoco();renderNow();renderTodo();}
 
 /* arranque */
