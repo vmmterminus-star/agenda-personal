@@ -2173,51 +2173,58 @@ function wBloque(w, d, nombres, v) {
 
 /* ---------- 3 · calendario ---------- */
 function eventos(d) { return (d.cal || []).filter(x => dias(x.f) >= 0); }
-function pintaLista(st, evs, alto) {
+/* cuánto mide la lista completa, para repartir el espacio que sobre */
+function altoLista(evs) { const ds = new Set(evs.map(x => x.f)).size; return ds * H.dia + evs.length * H.fila; }
+function pintaLista(st, evs, alto, aire) {
   let usado = 0, fuera = 0, dia = "";
   evs.forEach(x => {
     if (x.f !== dia) {
-      if (usado + H.dia + H.fila > alto - H.mas) { fuera++; return; }
+      const extra = dia && aire ? aire : 0;
+      if (usado + extra + H.dia + H.fila > alto - H.mas) { fuera++; return; }
+      if (extra) { st.addSpacer(extra); usado += extra; }
       const d = aFecha(x.f), n = dias(x.f);
       const lab = (n === 0 ? "hoy · " : n === 1 ? "mañana · " : "") + DIAS[d.getDay()] + " " + d.getDate();
       linea(st, lab.toUpperCase(), F.b(10), n === 0 ? K.acctx : K.hint); usado += H.dia; dia = x.f;
     }
     if (usado + H.fila > alto - H.mas) { fuera++; return; }
     const r = fila(st);
-    const h = r.addStack(); h.size = new Size(40, 0); texto(h, x.h || "—", F.m(10.5), K.mut); h.addSpacer();
+    const h = r.addStack(); h.size = new Size(50, 0); texto(h, x.h || "—", F.m(10.5), K.mut); h.addSpacer();
     punto(r, x.c); texto(r, x.t, F.r(11.5), K.txt); r.addSpacer(); usado += H.fila;
   });
   if (!evs.length) linea(st, "Nada programado.", F.r(11.5), K.mut);
   mas(st, fuera);
 }
-function mes(st, d) {
+/* una fila centrada a lo ancho */
+function centrada(st) { const r = st.addStack(); r.layoutHorizontally(); r.addSpacer(); const c = r.addStack(); c.layoutHorizontally(); r.addSpacer(); return c; }
+function semanasDelMes() { const h = new Date(), ini = (new Date(h.getFullYear(), h.getMonth(), 1).getDay() + 6) % 7; return Math.ceil((ini + new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate()) / 7); }
+function altoMes(extra) { return (16 + 3) + (12 + 3) + semanasDelMes() * (17 + extra + 3); }
+function mes(st, d, extra) {
   const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth();
   const puntos = {};
   (d.cal || []).forEach(x => { const f = aFecha(x.f); if (f.getFullYear() === y && f.getMonth() === m) (puntos[f.getDate()] = puntos[f.getDate()] || []).push(x.c); });
-  const cw = Math.floor((ANCHO - 2 * PAD) / 7);
-  const t = st.addStack(); t.size = new Size(cw * 7, 0); t.centerAlignContent(); texto(t, MESES_L[m], F.b(11.5), K.txt);
-  const cab = st.addStack(); cab.layoutHorizontally();
+  const cw = Math.floor((ANCHO - 2 * PAD) / 7), rh = 17 + extra;
+  texto(centrada(st), MESES_L[m], F.b(12), K.txt);
+  const cab = centrada(st);
   ["L", "M", "M", "J", "V", "S", "D"].forEach(x => { const c = cab.addStack(); c.size = new Size(cw, 12); c.centerAlignContent(); texto(c, x, F.m(9.5), K.hint); });
   const ini = (new Date(y, m, 1).getDay() + 6) % 7, fin = new Date(y, m + 1, 0).getDate();
-  let semanas = 0;
   for (let i = 0; i < ini + fin; i += 7) {
-    const r = st.addStack(); r.layoutHorizontally(); semanas++;
+    const r = centrada(st);
     for (let j = 0; j < 7; j++) {
-      const n = i + j - ini + 1, c = r.addStack(); c.size = new Size(cw, 17); c.layoutVertically(); c.centerAlignContent();
+      const n = i + j - ini + 1, c = r.addStack(); c.size = new Size(cw, rh); c.layoutVertically(); c.centerAlignContent();
       if (n < 1 || n > fin) continue;
       const esHoy = n === hoy.getDate();
-      const num = c.addStack(); num.size = new Size(cw - 6, 12); num.centerAlignContent(); num.cornerRadius = 4;
+      const num = c.addStack(); num.size = new Size(Math.min(cw - 6, 30), 13 + Math.min(extra, 4)); num.centerAlignContent(); num.cornerRadius = 5;
       if (esHoy) num.backgroundColor = K.accbg;
-      texto(num, n, esHoy ? F.b(10) : F.r(10), esHoy ? K.acctx : K.txt);
+      texto(num, n, esHoy ? F.b(10.5) : F.r(10.5), esHoy ? K.acctx : K.txt);
       const pr = c.addStack(); pr.size = new Size(cw, 4); pr.centerAlignContent(); pr.spacing = 1.5;
       (puntos[n] || []).slice(0, 3).forEach(cc => punto(pr, cc, 3));
     }
   }
-  return 12 + 16 + semanas * 17;
+  return altoMes(extra);
 }
 function tira(st, d) {
   const cw = Math.floor((ANCHO - 2 * PAD - 18) / 7);
-  const r = st.addStack(); r.layoutHorizontally(); r.spacing = 3;
+  const r = centrada(st); r.spacing = 3;
   for (let i = 0; i < 7; i++) {
     const f = new Date(); f.setDate(f.getDate() + i);
     const iso = f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0") + "-" + String(f.getDate()).padStart(2, "0");
@@ -2229,14 +2236,25 @@ function tira(st, d) {
     const p = c.addStack(); p.size = new Size(cw, 6); p.centerAlignContent(); p.spacing = 2;
     for (let k = 0; k < Math.min(n, 3); k++) punto(p, "#8A4529", 4);
   }
-  return 50;
+  return 44 + 3;
 }
 function wCal(w, d, v) {
   encabezado(w, d, "calendario");
+  const evs = eventos(d), GAP = 12;
   let alto = ALTO - 2 * PAD - H.enc;
-  if (v === "a") alto -= mes(w, d) + 4;
-  else if (v === "b") alto -= tira(w, d) + 4;
-  pintaLista(w, eventos(d), alto);
+  const lista = Math.max(altoLista(evs), H.fila);
+  if (v === "a") {
+    // si la lista es corta, el calendario crece para no dejar hueco abajo
+    const sobra = alto - altoMes(0) - GAP - 3 - lista - H.mas;
+    const extra = sobra > 0 ? Math.min(10, Math.floor(sobra * 0.7 / semanasDelMes())) : 0;
+    alto -= mes(w, d, extra);
+  } else if (v === "b") alto -= tira(w, d);
+  if (v !== "c") { w.addSpacer(GAP); alto -= GAP + 3; }
+  // lo que todavía sobre se reparte entre los días de la lista
+  const dias_ = new Set(evs.map(x => x.f)).size;
+  const resto = alto - lista - H.mas;
+  const aire = resto > 0 && dias_ > 1 ? Math.min(8, Math.floor(resto / (dias_ - 1))) : 0;
+  pintaLista(w, evs, alto, aire);
 }
 
 /* ---------- pantalla de bloqueo: solo el número ---------- */
