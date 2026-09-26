@@ -632,7 +632,7 @@ function save(){
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
  S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);
  S(TGKEY,tags);S(TGOKEY,tagOv);
- dirty=true;schedulePush();
+ dirty=true;cambios++;schedulePush();
 }
 
 /* =======================================================================
@@ -647,7 +647,7 @@ let cloudBusy=false,pushTimer=null,dirty=false;
    el celular (que suele tener todo plegado) le cerraría los bloques a la compu. */
 const UIKEYS=['agenda_synccode','agenda_remote_ts','agenda_open_v1','agenda_view_v1',
               'agenda_panels_v1','agenda_archopen','agenda_width_v1','agenda_focusopen','agenda_focuscol',
-              'agenda_shortview','agenda_sideblk_v1'];
+              'agenda_shortview','agenda_sideblk_v1','agenda_syncbase'];
 function esUI(k){return UIKEYS.indexOf(k)>=0;}
 function localBlob(){const o={};Object.keys(localStorage).forEach(k=>{if(k.indexOf('agenda_')===0&&!esUI(k))o[k]=localStorage.getItem(k);});return o;}
 function schedulePush(){if(!syncCode)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>syncCycle(),1500);}
@@ -661,8 +661,8 @@ async function applyCloud(force){const r=await fetch(SUPA_URL+"/rest/v1/agenda_s
  if(!force&&isEditingNow()){setSyncStatus('hay cambios en la nube… termina de editar');return false;}
  const data=rows[0].data||{};
  Object.keys(localStorage).forEach(k=>{if(k.indexOf('agenda_')===0&&!esUI(k))localStorage.removeItem(k);});
- Object.keys(data).forEach(k=>{if(!esUI(k))localStorage.setItem(k,data[k]);});
- localStorage.setItem('agenda_remote_ts',remoteTs);location.reload();return true;}
+ const base={};Object.keys(data).forEach(k=>{if(!esUI(k)){localStorage.setItem(k,data[k]);base[k]=data[k];}});
+ baseSet(base);localStorage.setItem('agenda_remote_ts',remoteTs);location.reload();return true;}
 /* ---------------------------------------------------------------------
    RESUMEN PARA EL WIDGET DEL IPHONE
    Se guarda en la misma tabla, con el código "<tucodigo>__widget".
@@ -744,22 +744,56 @@ function widgetBlob(){
          etiquetas:tags.map(t=>{const c=tagPal(t);
            return {id:t.id,n:t.n,i:tagIni(t),bg:c.bg,tx:c.tx};})};}
 
-async function doPush(){const ts=new Date().toISOString();const body=[{code:syncCode,data:localBlob(),updated_at:ts}];
+/* "Base" = cómo estaba todo la última vez que este dispositivo y la nube coincidieron.
+   Sirve para saber qué cambiaste TÚ aquí desde entonces (y no tirarlo si la nube cambió también). */
+function baseGet(){try{return JSON.parse(localStorage.getItem('agenda_syncbase')||'null');}catch(e){return null;}}
+function baseSet(o){try{localStorage.setItem('agenda_syncbase',JSON.stringify(o));}catch(e){}}
+let cambios=0;   // sube con cada save(); así un cambio hecho mientras se sube no se pierde
+async function doPush(){const ts=new Date().toISOString();const n=cambios;const blob=localBlob();const body=[{code:syncCode,data:blob,updated_at:ts}];
  let wErr="";
  try{body.push({code:syncCode+"__widget",data:widgetBlob(),updated_at:ts});}catch(e){wErr=' · ⚠ el widget no se armó: '+(e.message||e);}
  const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?on_conflict=code",{method:"POST",headers:Object.assign({},SUPA_HDR,{Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(body)});
- if(r.ok){localStorage.setItem('agenda_remote_ts',ts);dirty=false;setSyncStatus('✓ guardado en la nube'+wErr);return true;}setSyncStatus('error al guardar ('+r.status+')');return false;}
+ if(r.ok){localStorage.setItem('agenda_remote_ts',ts);baseSet(blob);widgetTs=Date.now();
+   dirty=(cambios!==n);if(dirty)schedulePush();
+   setSyncStatus('✓ guardado en la nube'+wErr);return true;}
+ setSyncStatus('error al guardar ('+r.status+')');return false;}
+/* solo el resumen del widget (otra fila): no toca tus datos, así que no provoca rebotes entre dispositivos */
+let widgetTs=0;
+async function pushWidget(){if(!syncCode||location.protocol==='file:')return;
+ try{await fetch(SUPA_URL+"/rest/v1/agenda_sync?on_conflict=code",{method:"POST",headers:Object.assign({},SUPA_HDR,{Prefer:"resolution=merge-duplicates,return=minimal"}),
+   body:JSON.stringify([{code:syncCode+"__widget",data:widgetBlob(),updated_at:new Date().toISOString()}])});widgetTs=Date.now();}catch(e){}}
+/* La nube cambió Y tú también cambiaste algo aquí: se juntan en vez de tirar lo tuyo.
+   Por cada dato: si lo cambiaste aquí desde la última vez, gana lo tuyo; si no, se toma el de la nube. */
+async function mergeCloud(){
+ const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?code=eq."+encodeURIComponent(syncCode)+"&select=data,updated_at",{headers:SUPA_HDR});
+ if(!r.ok){setSyncStatus('error al leer ('+r.status+')');return;}
+ const rows=await r.json();if(!rows.length){await doPush();return;}
+ const remote=rows[0].data||{},local=localBlob(),base=baseGet()||remote;
+ const llaves=new Set(Object.keys(remote).concat(Object.keys(local),Object.keys(base)));
+ const junto={};let cambiaAqui=false;
+ llaves.forEach(k=>{if(esUI(k))return;const l=local[k],v=(l!==base[k])?l:remote[k];
+   if(v!==undefined)junto[k]=v;if(v!==l)cambiaAqui=true;});
+ if(cambiaAqui){
+   Object.keys(localStorage).forEach(k=>{if(k.indexOf('agenda_')===0&&!esUI(k)&&!(k in junto))localStorage.removeItem(k);});
+   Object.keys(junto).forEach(k=>localStorage.setItem(k,junto[k]));}
+ localStorage.setItem('agenda_remote_ts',rows[0].updated_at);
+ const ok=await doPush();                  // sube lo ya juntado
+ if(ok&&cambiaAqui)location.reload();      // recarga solo si llegó algo de la nube
+}
 async function syncCycle(){
  if(!syncCode||cloudBusy)return;if(offlineFileWarn())return;cloudBusy=true;
  try{
    const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?code=eq."+encodeURIComponent(syncCode)+"&select=updated_at",{headers:SUPA_HDR});
    if(!r.ok){setSyncStatus('error al leer ('+r.status+')');cloudBusy=false;return;}
    const rows=await r.json();const remoteTs=rows.length?rows[0].updated_at:'';const localTs=localStorage.getItem('agenda_remote_ts')||'';
+   if(!rows.length){await doPush();cloudBusy=false;return;}   // nube vacía: se sube lo de aquí
    if(remoteTs&&remoteTs>localTs){
      if(isEditingNow()){setSyncStatus('hay cambios en la nube… termina de editar');cloudBusy=false;return;}
+     if(dirty&&baseGet()){await mergeCloud();cloudBusy=false;return;}   // antes: se tiraba lo que acababas de cambiar
      cloudBusy=false;await applyCloud(false);return;
    }
-   if(dirty){await doPush();}else setSyncStatus('✓ al día');
+   if(dirty){await doPush();}
+   else{setSyncStatus('✓ al día');if(Date.now()-widgetTs>15*60*1000)pushWidget();}
  }catch(e){setSyncStatus('sin conexión');}
  cloudBusy=false;
 }
@@ -771,7 +805,10 @@ async function forcePush(){if(!syncCode){setSyncStatus('Escribe tu código y con
  if(!confirm('Esto REEMPLAZA lo de la nube con lo de ESTE dispositivo. ¿Continuar?'))return;
  setSyncStatus('Subiendo a la nube…');await doPush();}
 function connectSync(){const v=document.getElementById('syncCodeInput').value.trim();if(!v){setSyncStatus('Escribe un código.');return;}
-  syncCode=v;localStorage.setItem('agenda_synccode',v);setSyncStatus('Conectando…');dirty=true;syncCycle().then(()=>setSyncStatus('✓ conectado como "'+v+'"'));}
+  syncCode=v;localStorage.setItem('agenda_synccode',v);setSyncStatus('Conectando…');
+  /* dispositivo nuevo (sin base): manda la nube; si la nube está vacía, sube lo de aquí */
+  localStorage.removeItem('agenda_syncbase');localStorage.removeItem('agenda_remote_ts');dirty=false;
+  syncCycle().then(()=>setSyncStatus('✓ conectado como "'+v+'"'));}
 
 /* =======================================================================
    UNIVERSO DE TAREAS
@@ -1921,7 +1958,7 @@ function setMode(m){viewMode=m;
  document.getElementById('mNow').classList.toggle('on',m==='now');
  document.getElementById('mAll').classList.toggle('on',m==='all');
  document.body.classList.toggle('modo-now',m==='now');
- localStorage.setItem(VMKEY,m);dirty=true;schedulePush();render();
+ localStorage.setItem(VMKEY,m);render();   // la vista es de cada dispositivo: no se sube a la nube
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=='now')return;renderCd();renderDays();renderEnergy();renderStreak();}
 function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
@@ -1932,6 +1969,8 @@ document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('e
 migrar();
 setMode(viewMode);
 setInterval(()=>{if(viewMode==='now')renderCd();},60000);
+/* si este dispositivo nunca guardó su "base", la de ahora es la última que coincidió con la nube */
+if(syncCode&&!baseGet())baseSet(localBlob());
 if(syncCode){syncCycle();setInterval(syncCycle,15000);}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&syncCode)syncCycle();});
 window.addEventListener('focus',()=>{if(syncCode)syncCycle();});
