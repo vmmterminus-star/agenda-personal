@@ -14,7 +14,7 @@ Se usa en la compu (planear, reorganizar) y en el iPhone (consultar, marcar hech
 - Secciones del JS (en orden): SEED → ESTADO → ETIQUETAS → SINCRONIZACIÓN → RESUMEN PARA EL WIDGET (`widgetBlob()`) → UNIVERSO DE TAREAS (`TK()`) → MIGRACIÓN (`migrar()`) → LISTA CORTA (vistas Libre/Bloque/Matriz/Horas) → BLOQUE DE SELECCIÓN → MODO AHORA → MODO TODO → ACCIONES → MODAL DE DETALLE → MENÚ ⋯ → RENDER.
 - Datos: `localStorage` (todas las claves `agenda_*`) + espejo en Supabase (`suwhvvxihzsfbbrcocbx.supabase.co`, tabla `agenda_sync(code, data, updated_at)`). Dos filas: `<código>` (respaldo completo) y `<código>__widget` (resumen para el widget). El código de sync lo escribe Valen en la app (⋯ → Respaldo), no va en el código.
 - Sync: `save()` → `schedulePush()` (1.5 s) → `syncCycle()` → `doPush()` / `applyCloud()`.
-- Widget de iPhone (Scriptable, `mi-agenda-widget.js`, 10 diseños según Parameter) solo lee la fila `__widget`. Los archivos del widget, wireframes e íconos viven en `C:\Users\Valen\Claude\Projects\Agenda` (no en este repo).
+- Widget de iPhone: `scriptable/mi-agenda-widget.js` (v3, solo widgets grandes, 9 variantes por Parameter: `hoy`, `hoy:b`, `hoy:c`, `bloque:X`, `bloque2:X`, `bloques:X, Y`, `cal`, `cal:b`, `cal:c`). Solo lee la fila `__widget`. Letra Outfit (Regular, Medium, SemiBold y Bold, instaladas en el iPhone con iFont). Valen lo copia desde la app: ⋯ → Widgets del iPhone. El código secreto NUNCA va en el repo; la app lo mete al copiar. Wireframes e íconos viejos: `C:\Users\Valen\Claude\Projects\Agenda`.
 
 ## CUIDADO — lo que se rompe sin darse cuenta
 1. **El array `SEED` es intocable.** IDs de tarea = `area|indiceGrupo|indiceItem`; todos los overrides cuelgan de ahí. Insertar, borrar o reordenar = se desplazan todas las tareas. Solo se puede cambiar `name` y colores de un área. Lo nuevo va en `customAreas` / `customSg`.
@@ -22,7 +22,7 @@ Se usa en la compu (planear, reorganizar) y en el iPhone (consultar, marcar hech
 3. **No renombrar claves `agenda_*`.** Están en Supabase con esos nombres. Estructura nueva = clave nueva.
 4. **Estado nuevo:** constante de clave + `let x=J(XKEY,…)` + línea `S(XKEY,x)` dentro de `save()`. Sin la última, se pierde al recargar.
 5. **No reiniciar `agenda_migr_v2`** ni volver a correr `migrar()`.
-6. **Contrato del widget bidireccional:** si cambia `widgetBlob()` (hoy 13 llaves, ~6.9 KB, tareas `{t,b,c,f,h,g}`), cambiar también `mi-agenda-widget.js`, y al revés.
+6. **Contrato del widget bidireccional:** si cambia `widgetBlob()` (v3: 16 llaves, ~12 KB; tareas `{t,b,c,f,h,g,k,s}`; nuevas `cortaN`, `colores`, `cal`), cambiar también `scriptable/mi-agenda-widget.js`, y al revés. Después de tocar el script: `sh scriptable/embeber.sh` (lo copia dentro de `index.html`, bloque `id="scriptableSrc"`). Probar con `scriptable/simulador.js` (imita Scriptable en el navegador) que ningún widget se desborde: iOS recorta arriba y abajo lo que no cabe.
 7. **Modal de detalle:** toda función que repinte debe llamar `guardaBorrador()` primero.
 8. En grids, siempre `minmax(0,1fr)`, nunca `1fr` pelón.
 
