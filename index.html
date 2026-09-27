@@ -301,6 +301,25 @@ body.modo-now #sideCol{display:none}
 /* ---------- archivo ---------- */
 .arch{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:12px;color:var(--mut)}
 .arch.drop{border-color:var(--grn);background:var(--grnbg)}
+/* tarjeta «Ahora» y franja «Tu día» */
+.ahora{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:10px}
+.ahtop{display:flex;align-items:center;gap:10px}
+.ahtx{flex:1;min-width:0;cursor:pointer}
+.ahcap{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--acctx)}
+.ahnom{font-size:16px;font-weight:600;margin-top:2px;line-height:1.25;word-break:break-word}
+.ahnum{font-size:30px;font-weight:600;color:var(--acctx);line-height:1;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.ahnum small{display:block;font-size:10.5px;font-weight:400;color:var(--mut)}
+.ahnum em{display:block;font-style:normal;font-size:10.5px;font-weight:400;color:var(--mut)}
+.ahbar{height:6px;border-radius:4px;background:var(--soft);overflow:hidden;margin-top:8px}
+.ahbar i{display:block;height:100%;background:var(--acc)}
+.ahpie{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11.5px;color:var(--mut)}
+.ahpie span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dtrack{position:relative;height:22px;border-radius:6px;background:var(--soft);overflow:hidden}
+.dseg{position:absolute;top:0;bottom:0;border-radius:3px;cursor:pointer}
+.dnow{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--txt)}
+.dmarcas{position:relative;height:14px;margin-top:3px}
+.dmarcas span{position:absolute;transform:translateX(-50%);font-size:9.5px;color:var(--hint);white-space:nowrap}
+.dmarcas span:first-child{transform:none}
 /* destinos para arrastrar en la vista Por bloque */
 .dests{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .dchipB{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--mut);border:1px dashed var(--line2);
@@ -406,6 +425,8 @@ body.modo-now #sideCol{display:none}
 
 <div id="page">
   <div id="colA">
+    <div id="ahoraBox"></div>
+    <div class="pnl" id="diaBox" style="display:none"></div>
     <div class="pnl" id="shortBox"></div>
     <div class="pnl" id="focoBox"></div>
 
@@ -562,6 +583,18 @@ const TIMES=[""].concat(DUR.map(d=>d.t));
 const OLDMAP={"2 h+":"3 h"};                       // valor viejo -> nuevo
 function durIdx(v){v=OLDMAP[v]||v;const i=DUR.findIndex(d=>d.t===v);return i;}
 function durOf(id){return durIdx(timeSt[id]||"");}
+/* minutos de cada escalón (varios días no tiene hora de fin) */
+const STEPMIN=[5,15,30,60,180,240,null];
+/* "1 h 15", "45 min", "1:30", "2h", "1.5 h", "90" → minutos */
+function leeDur(s){s=String(s||'').toLowerCase().replace(',','.').trim();if(!s)return null;
+ let m=s.match(/^(\d+):(\d{1,2})$/);if(m)return (+m[1])*60+(+m[2]);
+ let h=0,mi=0,ok=false;
+ m=s.match(/([\d.]+)\s*(h|hr|hrs|hora|horas)\b/);if(m){h=parseFloat(m[1]);ok=true;s=s.replace(m[0],' ');}
+ m=s.match(/([\d.]+)\s*(m|min|mins|minutos?)?\s*$/);if(m&&m[1]){mi=parseFloat(m[1]);if(!ok&&!m[2]&&mi<=12&&/h/.test(s))mi*=60;ok=true;}
+ const t=Math.round(h*60+mi);return ok&&t>0?t:null;}
+function fmtDur(m){if(!m)return'';const h=Math.floor(m/60),r=m%60;return h?(h+' h'+(r?' '+r+' min':'')):(r+' min');}
+/* duración de una tarea en minutos: la exacta si la escribiste; si no, la del escalón */
+function minutosDe(id){return durMin[id]||STEPMIN[durOf(id)]||null;}
 const GRUPOS=[
  {t:"Si tienes 5 minutos", bg:"var(--blubg)", tx:"var(--blutx)"},
  {t:"Si tienes media hora",bg:"var(--grnbg)", tx:"var(--grntx)"},
@@ -586,6 +619,7 @@ const SHKEY="agenda_short_v1",MGKEY="agenda_migr_v2",PNKEY="agenda_panels_v1",DS
 const FOKEY="agenda_foco_v1",STKEY="agenda_stepmode_v1";
 /* --- etiquetas de tipo: catálogo + asignación por tarea --- */
 const TGKEY="agenda_tags_v1",TGOKEY="agenda_tagov_v1";
+const DMKEY="agenda_durmin_v1";   /* duración exacta en minutos, por tarea (si la escribiste) */
 /* paleta cerrada de 8. El gris (índice 7) queda apartado para "sin etiqueta". */
 const TGPAL=[{k:'mor',n:'Morado',bg:'#EEEDFE',tx:'#3C3489'},
              {k:'ver',n:'Verde', bg:'#EAF3DE',tx:'#27500A'},
@@ -618,6 +652,9 @@ let short=J(SHKEY,"[]"),panels=J(PNKEY,"{}"),desc=J(DSCKEY,"{}");
 let foco=J(FOKEY,"[]"),stepMode=J(STKEY,"{}");
 let tags=localStorage.getItem(TGKEY)?J(TGKEY,"[]"):TGSEED.map(t=>Object.assign({},t));
 let tagOv=J(TGOKEY,"{}");
+let durMin=J(DMKEY,"{}");
+/* desde cuándo está cada cosa en «importa ahorita» (para el aviso de los 3 días). Las viejas cuentan desde hoy. */
+short.forEach(e=>{if(!e.at)e.at=todayStr();});
 let viewMode=localStorage.getItem(VMKEY)||"now";
 let shortView=localStorage.getItem("agenda_shortview")||"libre";   // libre · bloque · matriz · horas
 let archOpen=localStorage.getItem("agenda_archopen")==="1";
@@ -631,7 +668,7 @@ function save(){
  S(AOVKEY,areaOv);S(SYKEY,synced);S(SMKEY,syncMem);S(CSGKEY,customSg);S(HBKEY,hiddenB);S(DSGKEY,deletedSg);
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
  S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);
- S(TGKEY,tags);S(TGOKEY,tagOv);
+ S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);
  dirty=true;cambios++;schedulePush();
 }
 
@@ -736,7 +773,16 @@ function widgetBlob(){
    .sort((a,b)=>(dateOf(a)<dateOf(b)?-1:dateOf(a)>dateOf(b)?1:(minutos(timeOf(a))??9999)-(minutos(timeOf(b))??9999)))
    .slice(0,60).map(t=>({f:dateOf(t),h:timeOf(t)||'',t:txtOf(t),c:colOf(areaObjOf(t)).sol}));
 
- return {v:3,ts:new Date().toISOString(),atrasadas:atras,cortaN:cortaN,colores:colores,cal:cal,
+ /* para los avisos de Pushover (los lee Supabase): tareas con fecha de hace 7 días a 40 días,
+    con hora en HH:MM de 24 h, duración en minutos y si se repite; y desde cuándo está cada cosa en «importa ahorita» */
+ const hhmm=m=>m==null?'':String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+ const ag=TK().filter(t=>{if(!activo(t))return false;const f=dateOf(t);if(!f)return false;const n=dayDiff(f);return n>=-7&&n<=40;})
+   .slice(0,200).map(t=>({i:t.id,t:txtOf(t),f:dateOf(t),h:hhmm(minutos(timeOf(t))),d:minutosDe(t.id)||0,r:repLabel(repOf(t)),b:areaObjOf(t).name}));
+ const sh=[];short.forEach(e=>{
+   if(e.free){if(!e.done)sh.push({t:e.t,a:e.at||''});return;}
+   const tk=tkById(e.id);if(!tk||state[tk.id]||archived[tk.id])return;sh.push({t:txtOf(tk),a:e.at||''});});
+
+ return {v:3,ts:new Date().toISOString(),atrasadas:atras,cortaN:cortaN,colores:colores,cal:cal,av:{ag:ag,sh:sh},
          pendientes:TK().filter(activo).length,
          hoyHechas:hechas,hoyTotal:hechas+porHacerHoy,
          corta:corta,conHora:conHora,hoyManana:hoyMan,
@@ -928,10 +974,10 @@ function toggleCorta(ev,id){if(ev)ev.stopPropagation();
  const enModal=(currentModalId===id);
  if(enModal)guardaBorrador();
  const i=short.findIndex(e=>!e.free&&e.id===id);
- if(i>=0)short.splice(i,1);else short.push({id:id});
+ if(i>=0)short.splice(i,1);else short.push({id:id,at:todayStr()});
  save();render();if(enModal)pintaModal();}
 function cortaAdd(e){if(e.key!=='Enter')return;const v=e.target.value.trim();if(!v)return;
- short.push({free:true,id:"x"+Date.now().toString(36),t:v,done:false});e.target.value='';save();render();
+ short.push({free:true,id:"x"+Date.now().toString(36),t:v,done:false,at:todayStr()});e.target.value='';save();render();
  setTimeout(()=>{const el=document.getElementById('cortaInput');if(el)el.focus();},30);}
 function cortaToggle(i){const e=short[i];if(!e)return;
  if(e.free){e.done=!e.done;}else{toggle(e.id);return;}
@@ -1011,7 +1057,7 @@ function grpDrop(ev,areaKey){ev.preventDefault();ev.stopPropagation();ev.current
 function moverABloque(i,areaKey){const e=short[i];if(!e)return;const a=areaByKey(areaKey);if(!a)return;
  const sg=sgNames(a)[0];
  if(e.free){const id=areaKey+"|c|"+Date.now();custom.push({id,area:areaKey,sg,t:e.t});
-   if(e.done)state[id]=true;short[i]={id:id};save();render();return;}
+   if(e.done)state[id]=true;short[i]={id:id,at:e.at||todayStr()};save();render();return;}
  const tk=tkById(e.id);if(!tk)return;
  if(tk.id.includes('|c|')){const cc=custom.find(x=>x.id===tk.id);if(cc){cc.area=areaKey;cc.sg=sg;}delete areaOv[tk.id];delete sgOv[tk.id];}
  else{areaOv[tk.id]=areaKey;sgOv[tk.id]=sg;}
@@ -1040,7 +1086,7 @@ function qeDur(i,di){const e=short[i];if(!e||e.free)return;
 function qeArea(i,ak){const e=short[i];if(!e)return;
  if(e.free){promIdx=i;const a=areaByKey(ak);const sg=sgNames(a)[0];
    const id=ak+"|c|"+Date.now();custom.push({id,area:ak,sg,t:e.t});
-   if(e.done)state[id]=true;short[i]={id:id};promIdx=null;openAreas[ak]=true;save();render();return;}
+   if(e.done)state[id]=true;short[i]={id:id,at:e.at||todayStr()};promIdx=null;openAreas[ak]=true;save();render();return;}
  const tk=tkById(e.id);if(!tk)return;const a=areaByKey(ak);const sg=sgNames(a)[0];
  if(tk.id.includes('|c|')){const cc=custom.find(x=>x.id===tk.id);if(cc){cc.area=ak;cc.sg=sg;}delete areaOv[tk.id];delete sgOv[tk.id];}
  else{areaOv[tk.id]=ak;sgOv[tk.id]=sg;}
@@ -1186,6 +1232,58 @@ function renderShort(){
 }
 
 /* =======================================================================
+   AHORA — tarjeta de lo que estás haciendo y franja del día (tipo Tiimo)
+   Usa las tareas con fecha de HOY y hora, más los sueltos de «importa ahorita» con hora.
+   Sin duración: cuenta como 30 min para saber cuándo termina.
+   ======================================================================= */
+const DIA_INI=8*60,DIA_FIN=22*60,SIN_DUR=30;
+function fmtHora(m){m=((m%1440)+1440)%1440;const h=Math.floor(m/60),mi=m%60,ap=h<12?'am':'pm',h12=(h%12)||12;
+ return h12+(mi?':'+String(mi).padStart(2,'0'):'')+' '+ap;}
+function itemsHoy(){
+ const hoy=todayStr(),out=[];
+ TK().forEach(tk=>{if(!activo(tk)||dateOf(tk)!==hoy)return;const ini=minutos(timeOf(tk));if(ini==null)return;
+   const d=minutosDe(tk.id);out.push({id:tk.id,t:txtOf(tk),ini,d,fin:ini+(d||SIN_DUR),col:colOf(areaObjOf(tk)).sol});});
+ short.forEach((e,i)=>{if(!e.free||e.done||!e.hora)return;const ini=minutos(e.hora);if(ini==null)return;
+   out.push({id:'suelto:'+i,t:e.t,ini,d:null,fin:ini+SIN_DUR,col:'#8A7263',suelto:i});});
+ return out.sort((a,b)=>a.ini-b.ini);}
+function ahoraMin(){const d=new Date();return d.getHours()*60+d.getMinutes();}
+function yaTermine(id){if(id.indexOf('suelto:')===0){cortaToggle(+id.slice(7));return;}toggle(id);}
+function abreItem(id){if(id.indexOf('suelto:')===0)return;openDetail(null,id);}
+function renderAhora(){
+ const box=document.getElementById('ahoraBox'),dia=document.getElementById('diaBox');if(!box||!dia)return;
+ const its=itemsHoy(),n=ahoraMin();
+ if(!its.length){box.innerHTML='';dia.style.display='none';return;}
+ /* tarjeta */
+ const cur=its.find(x=>x.ini<=n&&n<x.fin),sig=its.find(x=>x.ini>n);
+ let h='';
+ if(cur){
+   const quedan=cur.fin-n,pct=Math.min(100,Math.round((n-cur.ini)/(cur.fin-cur.ini)*100));
+   const grande=quedan<60?`${quedan}<small>min</small>`:`${Math.floor(quedan/60)}:${String(quedan%60).padStart(2,'0')}<small>h</small>`;
+   h=`<div class="ahora"><div class="ahtop"><div class="ahtx" onclick="abreItem('${cur.id}')"><div class="ahcap">Ahora · ${fmtHora(cur.ini)} a ${fmtHora(cur.fin)}${cur.d?'':' · sin duración'}</div>`+
+     `<div class="ahnom">${esc(cur.t)}</div></div><div class="ahnum">${grande}</div></div>`+
+     `<div class="ahbar"><i style="width:${pct}%"></i></div>`+
+     `<div class="ahpie"><span>${sig?'Sigue: '+esc(sig.t)+' · '+fmtHora(sig.ini):'Es lo último con hora de hoy'}</span>`+
+     `<button class="mini" onclick="yaTermine('${cur.id}')">✓ ya terminé</button></div></div>`;
+ }else if(sig){
+   const falta=sig.ini-n;
+   const grande=falta<60?`${falta}<small>min</small>`:`${Math.floor(falta/60)}:${String(falta%60).padStart(2,'0')}<small>h</small>`;
+   h=`<div class="ahora"><div class="ahtop"><div class="ahtx" onclick="abreItem('${sig.id}')"><div class="ahcap">Sigue · ${fmtHora(sig.ini)}${sig.d?' · '+fmtDur(sig.d):''}</div>`+
+     `<div class="ahnom">${esc(sig.t)}</div></div><div class="ahnum">${grande}<em>para empezar</em></div></div></div>`;
+ }
+ box.innerHTML=h;
+ /* franja del día */
+ const ini=Math.min(DIA_INI,Math.floor(its[0].ini/60)*60),fin=Math.max(DIA_FIN,Math.ceil(its[its.length-1].fin/60)*60),span=fin-ini;
+ const pos=m=>((m-ini)/span*100).toFixed(2)+'%';
+ let seg='';its.forEach(x=>{const w=Math.max(0.8,(x.fin-x.ini)/span*100);const pas=x.fin<=n,esta=x===cur;
+   seg+=`<i class="dseg ${x.d?'':'sind'}" title="${esc(fmtHora(x.ini)+' · '+x.t)}" onclick="abreItem('${x.id}')" style="left:${pos(x.ini)};width:${x.d?w.toFixed(2)+'%':'3px'};background:${x.col};opacity:${esta?1:pas?.25:.55}"></i>`;});
+ let marcas='';for(let m=Math.ceil(ini/120)*120;m<=fin;m+=120)marcas+=`<span style="left:${pos(m)}">${fmtHora(m).replace(':00','')}</span>`;
+ const raya=(n>=ini&&n<=fin)?`<i class="dnow" style="left:${pos(n)}"></i>`:'';
+ dia.style.display='';
+ dia.innerHTML=`<div class="pnlh" style="cursor:default;margin-bottom:6px"><span class="ph" style="background:var(--soft);color:var(--mut)">Tu día</span><span class="n">${its.length} con hora</span></div>`+
+   `<div class="dtrack">${seg}${raya}</div><div class="dmarcas">${marcas}</div>`;
+}
+
+/* =======================================================================
    BLOQUE DE SELECCIÓN — las secciones que elijas, con sus columnas
    ======================================================================= */
 function focoToggle(k){const i=foco.indexOf(k);if(i>=0)foco.splice(i,1);else foco.push(k);save();render();}
@@ -1230,7 +1328,7 @@ function promOk(){const e=short[promIdx];if(!e)return closeMenu();
  const id=ak+"|c|"+Date.now();
  custom.push({id,area:ak,sg,t:e.t});
  if(e.done)state[id]=true;
- short[promIdx]={id:id};                 // se queda en la lista, ya como tarea
+ short[promIdx]={id:id,at:e.at||todayStr()};                 // se queda en la lista, ya como tarea
  openAreas[ak]=true;promIdx=null;closeMenu();save();render();}
 
 /* =======================================================================
@@ -1245,6 +1343,7 @@ function parseDT(tk){const d=dateOf(tk);const tt=timeOf(tk);if(!d)return null;co
 
 function renderCd(){
  const box=document.getElementById('cdBox');const now=new Date();
+ if(document.querySelector('#ahoraBox .ahora')){box.innerHTML="";return;}   // ya lo dice la tarjeta «Ahora»
  let best=null,bt=null;
  TK().forEach(tk=>{if(!activo(tk))return;const dt=parseDT(tk);if(dt&&dt>now&&(!bt||dt<bt)){bt=dt;best=tk;}});
  if(!best){box.innerHTML="";return;}
@@ -1655,6 +1754,7 @@ function guardaBorrador(){const id=currentModalId;if(!id)return;
  if(q('ds'))borrador.s=q('ds').value;
  if(q('dd'))borrador.dd=q('dd').value;
  if(q('dh'))borrador.h=q('dh').value;
+ if(q('dm'))borrador.dm=q('dm').value;
  if(q('dty'))borrador.ty=q('dty').value;
  if(q('dr'))borrador.r=q('dr').value;
  const sw=document.querySelector('.md .swbox[data-k="del"]');
@@ -1694,7 +1794,9 @@ function pintaModal(){
      `<div class="fld"><label>Fecha y hora</label><div class="frow"><input type="date" id="dd_${id}" value="${borrador.dd!==undefined?borrador.dd:(dateOf(tk)||'')}"><input id="dh_${id}" placeholder="hora (8 pm)" value="${esc(borrador.h!==undefined?borrador.h:timeOf(tk))}"></div></div>`+
      `<div class="fld"><label>Esa fecha es</label><select id="dty_${id}"><option value="due" ${ty==='due'?'selected':''}>Fecha límite · para ese día</option><option value="do" ${ty==='do'?'selected':''}>Día agendado · ese día</option></select></div>`+
      `<div class="fld"><label>Cuánto me toma</label><div class="regla"><div class="rtrack"></div>${marcas}</div>`+
-     `<div class="rlabels">${DUR.map(d=>`<span>${d.t}</span>`).join('')}</div></div>`+
+     `<div class="rlabels">${DUR.map(d=>`<span>${d.t}</span>`).join('')}</div>`+
+     `<div class="frow" style="margin-top:8px;align-items:center;gap:8px"><span style="font-size:11px;color:var(--mut);flex:none">o exacto</span>`+
+     `<input id="dm_${id}" placeholder="1 h 15" style="max-width:120px" value="${esc(borrador.dm!==undefined?borrador.dm:(durMin[id]?fmtDur(durMin[id]):''))}"></div></div>`+
      `<div class="fld"><label>Repetir</label><select id="dr_${id}">`+
        REPS.map(([v,l])=>`<option value="${v}" ${rep===v?'selected':''}>${l}</option>`).join('')+`</select></div>`+
      `<div class="swbox ${(borrador.del!==undefined?borrador.del:!!delegSt[id])?'on':''}" onclick="this.classList.toggle('on')" data-k="del"><span class="knob"><i></i></span>`+
@@ -1720,7 +1822,9 @@ function llenaSg(id){const sel=document.getElementById('ds_'+id);const ak=docume
  sel.innerHTML="";sgNames(a).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=labelOv[ak+'|'+s]||s;if(s===cur)o.selected=true;sel.appendChild(o);});}
 /* Todo lo que repinta el modal guarda primero lo que ya escribiste,
    para que puedas llenar los campos en el orden que se te dé la gana. */
-function setDur(id,i){guardaBorrador();timeSt[id]=i<0?"":DUR[i].t;save();render();pintaModal();}
+function setDur(id,i){guardaBorrador();timeSt[id]=i<0?"":DUR[i].t;
+ delete durMin[id];borrador.dm='';          // tocar un escalón borra la duración exacta
+ save();render();pintaModal();}
 function subAdd(e,id){if(e.key!=='Enter')return;const v=e.target.value.trim();if(!v)return;
  guardaBorrador();if(!subs[id])subs[id]=[];subs[id].push({t:v,done:false});e.target.value='';save();render();pintaModal();}
 function subToggle(id,i){guardaBorrador();subs[id][i].done=!subs[id][i].done;save();render();pintaModal();}
@@ -1733,6 +1837,10 @@ function saveDetail(id){
  if(borrador.d!==undefined){const v=borrador.d.trim();if(v)desc[id]=v;else delete desc[id];}
  if(borrador.dd!==undefined){if(borrador.dd)dateOv[id]=borrador.dd;else delete dateOv[id];}
  if(borrador.h!==undefined){const v=borrador.h.trim();if(v)timeOv[id]=v;else delete timeOv[id];}
+ if(borrador.dm!==undefined){const m=leeDur(borrador.dm);
+   if(m){durMin[id]=m;   // y el escalón más cercano, para el color de la barrita
+     let k=0;STEPMIN.forEach((x,j)=>{if(x&&Math.abs(x-m)<Math.abs(STEPMIN[k]-m))k=j;});timeSt[id]=DUR[k].t;}
+   else delete durMin[id];}
  if(borrador.r!==undefined){if(borrador.r)repeatOv[id]=borrador.r;else delete repeatOv[id];}
  if(borrador.ty!==undefined)dtypeOv[id]=borrador.ty;
  if(borrador.a!==undefined){const ak=borrador.a,sgv=borrador.s;
@@ -1962,13 +2070,14 @@ function setMode(m){viewMode=m;
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=='now')return;renderCd();renderDays();renderEnergy();renderStreak();}
 function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
-function render(){TKCACHE=null;tgWidth();renderShort();renderFoco();renderNow();renderTodo();}
+function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();}
 
 /* arranque */
 document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 migrar();
 setMode(viewMode);
 setInterval(()=>{if(viewMode==='now')renderCd();},60000);
+setInterval(renderAhora,30000);   // la tarjeta «Ahora» y la franja avanzan solas
 /* si este dispositivo nunca guardó su "base", la de ahora es la última que coincidió con la nube */
 if(syncCode&&!baseGet())baseSet(localBlob());
 if(syncCode){syncCycle();setInterval(syncCycle,15000);}
