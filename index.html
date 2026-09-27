@@ -708,7 +708,7 @@ async function applyCloud(force){const r=await fetch(SUPA_URL+"/rest/v1/agenda_s
    --------------------------------------------------------------------- */
 function widgetBlob(){
  /* k = clave del bloque, s = su sección (sub-bloque) */
- const meta=tk=>{const a=areaObjOf(tk),c=colOf(a);const sg=sgOf(tk);
+ const meta=tk=>{const a=areaObjOf(tk)||{name:'',key:''},c=colOf(areaObjOf(tk));const sg=sgOf(tk);
    const o={t:txtOf(tk),b:a.name,c:c.sol,f:dateOf(tk)||'',h:timeOf(tk)||'',k:a.key,s:labelOv[a.key+'|'+sg]||sg};
    const g=tgBlob(tk.id);if(g)o.g=g;return o;};
  const corta=[];let cortaN=0;
@@ -777,7 +777,7 @@ function widgetBlob(){
     con hora en HH:MM de 24 h, duración en minutos y si se repite; y desde cuándo está cada cosa en «importa ahorita» */
  const hhmm=m=>m==null?'':String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
  const ag=TK().filter(t=>{if(!activo(t))return false;const f=dateOf(t);if(!f)return false;const n=dayDiff(f);return n>=-7&&n<=40;})
-   .slice(0,200).map(t=>({i:t.id,t:txtOf(t),f:dateOf(t),h:hhmm(minutos(timeOf(t))),d:minutosDe(t.id)||0,r:repLabel(repOf(t)),b:areaObjOf(t).name}));
+   .slice(0,200).map(t=>({i:t.id,t:txtOf(t),f:dateOf(t),h:hhmm(minutos(timeOf(t))),d:minutosDe(t.id)||0,r:repLabel(repOf(t)),b:(areaObjOf(t)||{}).name||''}));
  const sh=[];short.forEach(e=>{
    if(e.free){if(!e.done)sh.push({t:e.t,a:e.at||''});return;}
    const tk=tkById(e.id);if(!tk||state[tk.id]||archived[tk.id])return;sh.push({t:txtOf(tk),a:e.at||''});});
@@ -806,8 +806,9 @@ async function doPush(){const ts=new Date().toISOString();const n=cambios;const 
 /* solo el resumen del widget (otra fila): no toca tus datos, así que no provoca rebotes entre dispositivos */
 let widgetTs=0;
 async function pushWidget(){if(!syncCode||location.protocol==='file:')return;
+ let data;try{data=widgetBlob();}catch(e){setSyncStatus('⚠ el widget y los avisos no se armaron: '+(e.message||e));widgetTs=Date.now();return;}
  try{await fetch(SUPA_URL+"/rest/v1/agenda_sync?on_conflict=code",{method:"POST",headers:Object.assign({},SUPA_HDR,{Prefer:"resolution=merge-duplicates,return=minimal"}),
-   body:JSON.stringify([{code:syncCode+"__widget",data:widgetBlob(),updated_at:new Date().toISOString()}])});widgetTs=Date.now();}catch(e){}}
+   body:JSON.stringify([{code:syncCode+"__widget",data:data,updated_at:new Date().toISOString()}])});widgetTs=Date.now();}catch(e){}}
 /* La nube cambió Y tú también cambiaste algo aquí: se juntan en vez de tirar lo tuyo.
    Por cada dato: si lo cambiaste aquí desde la última vez, gana lo tuyo; si no, se toma el de la nube. */
 async function mergeCloud(){
