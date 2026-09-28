@@ -2120,6 +2120,7 @@ const K = {
   hint: new Color("#A79E92"), linea: new Color("#E2DBD0"),
   acc: new Color("#C97B5A"), accbg: new Color("#F4E2D9"), acctx: new Color("#8A4529"),
   dantx: new Color("#8C3325"), gris: new Color("#F1EFE8"), suave: new Color("#EFEAE2"),
+  ciruela: new Color("#7A6A8C"), ciruelatx: new Color("#544763"),   // días del calendario
 };
 const col = h => new Color(h || "#8A7263");
 
@@ -2333,7 +2334,7 @@ function pintaLista(st, evs, alto, aire) {
       if (extra) { st.addSpacer(extra); usado += extra; }
       const d = aFecha(x.f), n = dias(x.f);
       const lab = (n === 0 ? "hoy · " : n === 1 ? "mañana · " : "") + DIAS[d.getDay()] + " " + d.getDate();
-      linea(st, lab.toUpperCase(), F.b(10), n === 0 ? K.acctx : K.hint); usado += H.dia; dia = x.f;
+      tituloDia(st, lab.toUpperCase()); usado += H.dia; dia = x.f;
     }
     if (usado + H.fila > alto - H.mas) { fuera++; return; }
     const r = fila(st);
@@ -2342,6 +2343,12 @@ function pintaLista(st, evs, alto, aire) {
   });
   if (!evs.length) linea(st, "Nada programado.", F.r(11.5), K.mut);
   mas(st, fuera);
+}
+/* el día en ciruela y una línea del mismo color hasta el borde */
+function tituloDia(st, lab) {
+  const r = fila(st); r.spacing = 8;
+  texto(r, lab, F.b(10.5), K.ciruelatx);
+  const l = r.addStack(); l.size = new Size(0, 1.5); l.backgroundColor = K.ciruela; l.addSpacer();
 }
 /* una fila centrada a lo ancho */
 function centrada(st) { const r = st.addStack(); r.layoutHorizontally(); r.addSpacer(); const c = r.addStack(); c.layoutHorizontally(); r.addSpacer(); return c; }
