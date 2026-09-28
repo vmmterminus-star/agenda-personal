@@ -181,7 +181,27 @@ input.add::placeholder{color:var(--mut)}
 .step.done .stx{text-decoration:line-through;opacity:.45}
 .step.cur .stx{font-weight:600}
 .substep{display:flex;gap:7px;align-items:center;font-size:11.5px;padding:3px 0;color:var(--mut)}
-.substep.done span:last-child{text-decoration:line-through;opacity:.5}
+.substep.done span:nth-child(2){text-decoration:line-through;opacity:.5}
+/* pasos: agarradera, flechas, quitar y subpasos */
+.step .sgrip{align-self:center;margin-left:-4px}
+.step.over{box-shadow:0 -2px 0 var(--acc)}
+.step.dragging{opacity:.4}
+.ach.over{box-shadow:0 -2px 0 var(--acc)}
+/* «＋ bloque» en lo que estoy trabajando */
+.fchip .fx{font-size:9px;opacity:.55;margin-left:2px}
+.fchip.fadd{border-style:dashed;color:var(--mut)}
+.fmenu{flex-basis:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:4px;margin-top:2px}
+.fitem{display:flex;align-items:center;gap:7px;border:none;background:none;font-family:inherit;font-size:12px;color:var(--txt);padding:7px 8px;border-radius:7px;text-align:left;cursor:pointer}
+.fitem:hover{background:var(--soft)}
+.ach.dragging{opacity:.4}
+.ach .mv{width:20px;height:20px;flex:none}
+.ach .grip{margin-right:-4px}
+.sacc{display:flex;align-items:center;gap:3px;flex:none;align-self:flex-start;padding-top:3px}
+.mv{width:22px;height:22px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--mut);font-size:9px;cursor:pointer;padding:0}
+.mv:disabled{opacity:.3;cursor:default}
+.sx{color:var(--hint);cursor:pointer;font-size:10px;padding:0 2px}
+.subadd{border:none;background:transparent;font-family:inherit;font-size:11.5px;color:var(--txt);padding:3px 0 0 24px;width:100%;outline:none}
+.subadd::placeholder{color:var(--hint)}
 
 /* ---------- avisos y tira de días ---------- */
 .alert{border-radius:0 10px 10px 0;padding:9px 12px;font-size:12px;display:flex;gap:9px;
@@ -617,6 +637,7 @@ const RMKEY2="agenda_remind_v1",DTKEY2="agenda_datetype_v1";
 /* nuevas */
 const SHKEY="agenda_short_v1",MGKEY="agenda_migr_v2",PNKEY="agenda_panels_v1",DSCKEY="agenda_desc_v1";
 const FOKEY="agenda_foco_v1",STKEY="agenda_stepmode_v1";
+const BOKEY="agenda_blockorder_v1";   /* orden de los bloques (se sincroniza) */
 /* --- etiquetas de tipo: catálogo + asignación por tarea --- */
 const TGKEY="agenda_tags_v1",TGOKEY="agenda_tagov_v1";
 const DMKEY="agenda_durmin_v1";   /* duración exacta en minutos, por tarea (si la escribiste) */
@@ -650,6 +671,7 @@ let areaDesc=J(ADKEY,"{}"),sgDesc=J(SDKEY,"{}"),deletedSg=J(DSGKEY,"{}");
 let rmind=J(RMKEY2,"[]"),dtypeOv=J(DTKEY2,"{}");
 let short=J(SHKEY,"[]"),panels=J(PNKEY,"{}"),desc=J(DSCKEY,"{}");
 let foco=J(FOKEY,"[]"),stepMode=J(STKEY,"{}");
+let blockOrder=J(BOKEY,"[]");
 let tags=localStorage.getItem(TGKEY)?J(TGKEY,"[]"):TGSEED.map(t=>Object.assign({},t));
 let tagOv=J(TGOKEY,"{}");
 let durMin=J(DMKEY,"{}");
@@ -667,7 +689,7 @@ function save(){
  S(TXKEY,textOv);S(DTKEY,dateOv);S(RPKEY,repeatOv);S(SUKEY,subs);S(DLKEY,doneLog);S(TMKEY,timeOv);
  S(AOVKEY,areaOv);S(SYKEY,synced);S(SMKEY,syncMem);S(CSGKEY,customSg);S(HBKEY,hiddenB);S(DSGKEY,deletedSg);
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
- S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);
+ S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);S(BOKEY,blockOrder);
  S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);
  dirty=true;cambios++;schedulePush();
 }
@@ -885,7 +907,10 @@ function tgPill(taskId){const t=tagDe(taskId);if(!t)return"";const c=tagPal(t);
 function tgBlob(taskId){const t=tagDe(taskId);if(!t)return null;const c=tagPal(t);
  return {id:t.id,n:t.n,i:tagIni(t),bg:c.bg,tx:c.tx};}
 
-function areas(){return [INBOX].concat(SEED,customAreas).filter(a=>!deletedAreas[a.key]);}
+function areas(){const l=[INBOX].concat(SEED,customAreas).filter(a=>!deletedAreas[a.key]);
+ if(!blockOrder.length)return l;          // el orden que tú elegiste; los bloques nuevos van al final
+ const pos=k=>{const i=blockOrder.indexOf(k);return i<0?999:i;};
+ return l.map((a,i)=>({a,i})).sort((x,y)=>(pos(x.a.key)-pos(y.a.key))||(x.i-y.i)).map(x=>x.a);}
 function areaByKey(k){return [INBOX].concat(SEED,customAreas).find(a=>a.key===k);}
 function colOf(a){ // acepta el formato viejo (bg/fg/sgfg) y el nuevo (sol/bg/tx)
  if(!a)return{sol:"#8A7263",bg:"#EDE5DF",tx:"#5A4437"};
@@ -1287,12 +1312,19 @@ function renderAhora(){
 /* =======================================================================
    BLOQUE DE SELECCIÓN — las secciones que elijas, con sus columnas
    ======================================================================= */
+let focoMenu=false;   /* el menú de «＋ bloque» abierto o cerrado (no se guarda) */
 function focoToggle(k){const i=foco.indexOf(k);if(i>=0)foco.splice(i,1);else foco.push(k);save();render();}
 function renderFoco(){
  const box=document.getElementById('focoBox');
- const chips=areas().filter(a=>!hiddenB[a.key]).map(a=>{const c=colOf(a);const on=foco.includes(a.key);
-   return `<button class="fchip ${on?'on':''}" style="${on?`background:${c.bg};color:${c.tx};border-color:${c.sol}`:''}" onclick="focoToggle('${a.key}')">`+
-          `<span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}</button>`;}).join('');
+ /* solo se ven los bloques elegidos; el resto sale al tocar «＋ bloque» */
+ const elegidos=foco.map(k=>areaByKey(k)).filter(a=>a&&!deletedAreas[a.key]);
+ const resto=areas().filter(a=>!hiddenB[a.key]&&!foco.includes(a.key));
+ let chips=elegidos.map(a=>{const c=colOf(a);
+   return `<button class="fchip on" style="background:${c.bg};color:${c.tx};border-color:${c.sol}" title="Quitar" onclick="focoToggle('${a.key}')">`+
+          `<span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}<span class="fx">✕</span></button>`;}).join('');
+ if(resto.length)chips+=`<button class="fchip fadd" onclick="focoMenu=!focoMenu;renderFoco()">＋ bloque ${focoMenu?'▴':'▾'}</button>`;
+ if(focoMenu&&resto.length)chips+=`<div class="fmenu">`+resto.map(a=>{const c=colOf(a);
+   return `<button class="fitem" onclick="focoMenu=false;focoToggle('${a.key}')"><span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}</button>`;}).join('')+`</div>`;
  let cuerpo="";let total=0;
  foco.forEach(k=>{const a=areaByKey(k);if(!a||deletedAreas[k])return;const c=colOf(a);
    const nombres=sgNames(a);
@@ -1310,7 +1342,7 @@ function renderFoco(){
  box.innerHTML=`<div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--blubg);color:var(--blutx)">En lo que estoy trabajando</span>`+
    (total?`<span class="n">${total}</span>`:'')+`</div>`+
    `<div class="fchips">${chips}</div>`+
-   (cuerpo||`<div class="lcempty" style="margin-top:8px">Elige arriba los bloques que traes en la cabeza y aquí salen todas sus tareas juntas, por sección.</div>`);
+   (cuerpo||`<div class="lcempty" style="margin-top:8px">Toca «＋ bloque» para elegir los bloques que traes en la cabeza; aquí salen todas sus tareas juntas, por sección.</div>`);
 }
 /* mandar un pendiente suelto a un bloque */
 let promIdx=null;
@@ -1497,23 +1529,50 @@ function renderPasos(areaKey,sg){
  const items=tasksFor(areaKey,sg);
  if(!items.length)return `<div class="lcempty" style="padding:6px 0">Todavía no hay pasos. Agrega el primero abajo.</div>`;
  const actual=items.findIndex(t=>!state[t.id]);
+ const sgEnc=encodeURIComponent(sg);
  let h=`<div class="pasos">`;
  items.forEach((tk,i)=>{
    const hecho=!!state[tk.id];const cur=(i===actual);
    const st=subs[tk.id]||[];
    let sub="";
-   st.forEach((s,j)=>{sub+=`<div class="substep ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="subToggle('${tk.id}',${j})">${s.done?'✓':''}</span><span>${esc(s.t)}</span></div>`;});
+   st.forEach((s,j)=>{sub+=`<div class="substep ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="pasoSub('${tk.id}',${j},'t')">${s.done?'✓':''}</span><span style="flex:1">${esc(s.t)}</span><span class="sx" title="Borrar subpaso" onclick="pasoSub('${tk.id}',${j},'x')">✕</span></div>`;});
+   sub+=`<input class="subadd" placeholder="＋ subpaso" onkeydown="pasoSubAdd(event,'${tk.id}')">`;
    const di=durOf(tk.id);const dur=di>=0?`<span class="tim">${DUR[di].t}</span>`:'';
    const d=dateOf(tk);const n=d?dayDiff(d):null;
-   h+=`<div class="step ${hecho?'done':''} ${cur?'cur':''}">`+
+   h+=`<div class="step ${hecho?'done':''} ${cur?'cur':''}" draggable="true" data-id="${tk.id}" ondragstart="tDragStart(event)" ondragover="tDragOver(event)" ondragleave="tDragLeave(event)" ondrop="tDrop(event)" ondragend="tDragEnd(event)">`+
      (i<items.length-1?`<span class="line"></span>`:'')+
+     `<span class="grip sgrip" title="Arrastra para cambiar el orden">⠿</span>`+
      `<span class="num" onclick="chkToggle(event,'${tk.id}')">${hecho?'✓':i+1}</span>`+
      `<div class="sbody"><div class="stx" onclick="openDetail(event,'${tk.id}')">${esc(txtOf(tk))}</div>`+
      ((dur||n!==null)?`<div class="sb">${dur}${pastillaCuando(n)}</div>`:'')+
      sub+`</div>`+
+     `<div class="sacc"><button class="mv" title="Subir un lugar" ${i===0?'disabled':''} onclick="pasoMover('${areaKey}','${sgEnc}','${tk.id}',-1)">▲</button>`+
+     `<button class="mv" title="Bajar un lugar" ${i===items.length-1?'disabled':''} onclick="pasoMover('${areaKey}','${sgEnc}','${tk.id}',1)">▼</button>`+
      `<button class="up ${enCorta(tk.id)?'on':''}" title="Subir a lo que importa ahorita" onclick="toggleCorta(event,'${tk.id}')">↑</button>`+
+     `<span class="rx" title="Quitar este paso" onclick="pasoQuitar(event,'${tk.id}')">✕</span></div>`+
      `</div>`;});
  return h+`</div>`;}
+/* mover un paso un lugar arriba o abajo dentro de su sección */
+function pasoMover(areaKey,sgEnc,id,dir){
+ const sg=decodeURIComponent(sgEnc);const items=tasksFor(areaKey,sg);const i=items.findIndex(t=>t.id===id),j=i+dir;
+ if(i<0||j<0||j>=items.length)return;
+ let ord=(areaOrder[areaKey]||[]).slice();
+ TK().filter(t=>areaOf(t)===areaKey).forEach(t=>{if(ord.indexOf(t.id)<0)ord.push(t.id);});   // los que no tenían lugar
+ // el orden de la sección manda: se reacomodan sus ids en los lugares que ya ocupaban
+ const sec=items.map(t=>t.id);const tmp=sec[i];sec[i]=sec[j];sec[j]=tmp;
+ const lugares=ord.map((x,k)=>sec.indexOf(x)>=0?k:-1).filter(k=>k>=0);
+ lugares.forEach((k,n)=>{ord[k]=sec[n];});
+ areaOrder[areaKey]=ord;save();render();}
+/* quitar un paso: los que agregaste se borran; los de la plantilla original van al cajón */
+function pasoQuitar(ev,id){ev.stopPropagation();
+ if(id.includes('|c|')){delTask(ev,id);return;}
+ if(!confirm('¿Quitar este paso? Se va al cajón.'))return;archIt(null,id);}
+function pasoSub(id,j,que){const st=subs[id];if(!st||!st[j])return;
+ if(que==='x'){st.splice(j,1);if(!st.length)delete subs[id];}else st[j].done=!st[j].done;
+ save();render();}
+function pasoSubAdd(e,id){if(e.key!=='Enter')return;const v=e.target.value.trim();if(!v)return;
+ if(!subs[id])subs[id]=[];subs[id].push({t:v,done:false});save();render();
+ setTimeout(()=>{const el=document.querySelector(`.step[data-id="${id}"] .subadd`);if(el)el.focus();},30);}
 
 function renderGrid(){
  const grid=document.getElementById('grid');let out="";
@@ -1549,15 +1608,38 @@ function renderGrid(){
      });
      cuerpo+=`<button class="addsm" style="margin-top:10px" onclick="newSgInput(this,'${area.key}')">＋ sección</button>`;
    }
-   out+=`<div class="ac"><div class="ach ${cerrado?'closed':''}" onclick="toggleArea('${area.key}')">`+
+   out+=`<div class="ac"><div class="ach ${cerrado?'closed':''}" onclick="toggleArea('${area.key}')" draggable="true" data-bk="${area.key}" ondragstart="bDragStart(event)" ondragover="bDragOver(event)" ondragleave="bDragLeave(event)" ondrop="bDrop(event)" ondragend="bDragEnd(event)">`+
+     `<span class="grip" title="Arrastra para cambiar el orden de los bloques">⠿</span>`+
      `<span class="ar">${cerrado?'▸':'▾'}</span><span class="adot" style="background:${c.sol}"></span>`+
      `<span class="aname">${esc(area.name)}</span>${chips}<span class="acount">${pend.length}</span>`+
+     `<button class="mv" title="Subir el bloque" onclick="moverBloque(event,'${area.key}',-1)">▲</button>`+
+     `<button class="mv" title="Bajar el bloque" onclick="moverBloque(event,'${area.key}',1)">▼</button>`+
      `<span class="ahide" title="Ocultar este bloque" onclick="hideBlock(event,'${area.key}')">ocultar</span>`+
      ((area.temp||area.custom)?`<span class="ahide" title="Eliminar bloque" onclick="delArea(event,'${area.key}')">borrar</span>`:"")+
      `</div>${cerrado?'':`<div class="acb">${cuerpo}</div>`}</div>`;
  });
  grid.innerHTML=out;
 }
+/* ---------- orden de los bloques ---------- */
+/* los que se ven en la pantalla de Todo (los ocultos y "Sin clasificar" vacío no cuentan) */
+function bloquesVisibles(){return areas().filter(a=>{if(hiddenB[a.key])return false;
+ if(a.inbox&&!TK().some(t=>areaOf(t)===a.key&&!archived[t.id]))return false;return true;}).map(a=>a.key);}
+/* pone "k" justo antes de "antes" (o al final) y guarda el orden completo */
+function colocaBloque(k,antes){const todos=areas().map(a=>a.key).filter(x=>x!==k);
+ const i=antes?todos.indexOf(antes):-1;if(i<0)todos.push(k);else todos.splice(i,0,k);
+ blockOrder=todos;save();render();}
+function moverBloque(ev,k,dir){ev.stopPropagation();const vis=bloquesVisibles();const i=vis.indexOf(k),j=i+dir;
+ if(i<0||j<0||j>=vis.length)return;
+ colocaBloque(k,dir<0?vis[j]:(vis[j+1]||null));}
+let bDrag=null;
+function bDragStart(e){bDrag=e.currentTarget.dataset.bk;e.currentTarget.classList.add('dragging');}
+function bDragEnd(e){e.currentTarget.classList.remove('dragging');document.querySelectorAll('.ach.over').forEach(x=>x.classList.remove('over'));bDrag=null;}
+function bDragOver(e){if(!bDrag)return;e.preventDefault();if(e.currentTarget.dataset.bk!==bDrag)e.currentTarget.classList.add('over');}
+function bDragLeave(e){e.currentTarget.classList.remove('over');}
+function bDrop(e){if(!bDrag)return;e.preventDefault();e.stopPropagation();const k=bDrag,dest=e.currentTarget.dataset.bk;bDrag=null;
+ e.currentTarget.classList.remove('over');if(!dest||dest===k)return;
+ const vis=bloquesVisibles();   // soltarlo sobre un bloque de más abajo lo deja después de él; de más arriba, antes
+ colocaBloque(k,vis.indexOf(k)<vis.indexOf(dest)?(vis[vis.indexOf(dest)+1]||null):dest);}
 function renderHidden(){
  const box=document.getElementById('hiddenBar');
  const keys=Object.keys(hiddenB).filter(k=>hiddenB[k]);
@@ -1593,14 +1675,16 @@ function renderDateBox(){
    const mname=base.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
    const nav=`<div class="calnav"><span onclick="calNav(-1)">‹</span><b>${mname}</b><span onclick="calNav(1)">›</span>${calOffset!==0?'<span style="font-size:10px" onclick="calNav('+(-calOffset)+')">hoy</span>':''}</div>`;
    let rows="";
-   list.slice().sort((a,b)=>dayDiff(dateOf(a))-dayDiff(dateOf(b))).forEach(tk=>{
+   /* solo lo del mes que estás viendo en el calendario */
+   const delMes=t=>{const p=dateOf(t).split("-").map(Number);return p[0]===yr&&p[1]-1===mo;};
+   list.filter(delMes).sort((a,b)=>dayDiff(dateOf(a))-dayDiff(dateOf(b))).forEach(tk=>{
      const n=dayDiff(dateOf(tk));const T=tonoFecha(n);const a=areaObjOf(tk),ca=colOf(a);
      rows+=`<div class="prow ${T.cls}" onclick="openDetail(event,'${tk.id}')">`+
        `<span class="pd" style="background:${T.bg};color:${T.tx}">${T.lab||dLabel(dateOf(tk))}</span>`+
        `<span class="pt">${esc(txtOf(tk))}</span>`+
        `<span class="lb" style="background:${ca.bg};color:${ca.tx}">${esc(a.name)}</span>`+
        (timeOf(tk)?`<span class="pw">${esc(timeOf(tk))}</span>`:'')+`</div>`;});
-   cuerpo=nav+cal+(rows||'<div class="lcempty">Nada con fecha.</div>');
+   cuerpo=nav+cal+(rows||'<div class="lcempty">Nada con fecha en este mes.</div>');
  }
  box.innerHTML=`<div class="pnlh" onclick="togglePanel('date')"><span class="ph" style="background:var(--blubg);color:var(--blutx)">Con fecha</span><span class="n">${list.length}</span><span class="ar">${abierto?'▾':'▸'}</span></div>${cuerpo}`;
 }
@@ -1720,7 +1804,8 @@ function tDrop(e){e.preventDefault();e.stopPropagation();const target=e.currentT
  const tk=tkById(tDrag),tt=tkById(target);if(!tk||!tt)return;if(areaOf(tk)!==areaOf(tt))return;
  sgOv[tDrag]=sgOf(tt);
  let ord=areaOrder[areaOf(tk)]||TK().filter(t=>areaOf(t)===areaOf(tk)).map(t=>t.id);
- ord=ord.filter(x=>x!==tDrag);let ti=ord.indexOf(target);if(ti<0)ti=ord.length;ord.splice(ti,0,tDrag);
+ const bajando=ord.indexOf(tDrag)>=0&&ord.indexOf(tDrag)<ord.indexOf(target);   // hacia abajo queda después del destino
+ ord=ord.filter(x=>x!==tDrag);let ti=ord.indexOf(target);if(ti<0)ti=ord.length;else if(bajando)ti++;ord.splice(ti,0,tDrag);
  areaOrder[areaOf(tk)]=ord;save();render();}
 function sgDragOver(e){e.preventDefault();e.currentTarget.classList.add('drop');}
 function sgDragLeave(e){e.currentTarget.classList.remove('drop');}
