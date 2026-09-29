@@ -261,6 +261,18 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .mdit.ahora .mdbd b{color:var(--acctx)}
 .mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums}
 .mdpill{width:26px;flex:none;border:1px solid;border-left-width:4px;border-radius:6px}
+.mdin2{margin-top:6px;display:flex;flex-direction:column;gap:5px}
+.mdmini{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-left:4px solid;border-radius:8px;padding:5px 7px}
+.mdmini.hecho .mdbd b{text-decoration:line-through;opacity:.45}
+.mdmini.ahora{box-shadow:0 0 0 1px var(--acc)}
+.mdit.fijo .mdmini .mdbd b{font-size:12.5px;color:var(--txt);font-weight:600;cursor:pointer}
+.mdtm.enfijo{width:auto;min-width:44px;text-align:left;padding-top:0;font-size:10.5px}
+.mdhoyno{font-size:10px;font-weight:500;color:var(--hint);border:1px solid var(--line2);border-radius:7px;padding:0 6px;margin-left:6px;cursor:pointer;white-space:nowrap}
+.mdmini{flex-wrap:wrap;row-gap:2px}
+.mdmini .mdbd{order:3;flex-basis:100%}
+.mdmini .mdacc{margin-left:auto}
+.mdadd{align-self:flex-start;font-size:11px;font-weight:600;color:var(--acctx);border:1px dashed var(--acc);border-radius:7px;padding:2px 8px;cursor:pointer}
+.mdit.fijo.over{outline:1.5px dashed var(--acc);border-radius:8px}
 .mdpill.fijo{background:repeating-linear-gradient(135deg,var(--soft) 0 5px,#fff 5px 9px);border-color:var(--line2);border-left-color:var(--hint)}
 .mdit.fijo .mdbd b{color:var(--mut);font-weight:500;cursor:default}
 .mdtm.ed,.mdbd em.ed{cursor:pointer;border-bottom:1px dashed var(--line2)}
@@ -1332,7 +1344,8 @@ function renderAhora(){
  const its=itemsHoy(),n=ahoraMin();
  if(!its.length){box.innerHTML='';dia.style.display='none';return;}
  /* tarjeta */
- const cur=its.find(x=>x.ini<=n&&n<x.fin),sig=its.find(x=>x.ini>n);
+ /* si hay una tarea dentro de un bloque fijo, manda la tarea */
+ const cur=its.find(x=>!x.fijo&&x.ini<=n&&n<x.fin)||its.find(x=>x.ini<=n&&n<x.fin),sig=its.find(x=>x.ini>n);
  let h='';
  if(cur){
    const quedan=cur.fin-n,pct=Math.min(100,Math.round((n-cur.ini)/(cur.fin-cur.ini)*100));
@@ -1456,9 +1469,37 @@ function pDragEnd(e){e.currentTarget.classList.remove('dragging');pDrag=null;doc
 function gapOver(e){if(!pDrag)return;e.preventDefault();e.currentTarget.classList.add('over');}
 function gapLeave(e){e.currentTarget.classList.remove('over');}
 function gapDrop(e,ini){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;colocar(k,ini);}
+/* una tarea en la línea de tiempo. mini = dentro de un bloque fijo (a la derecha, más compacta) */
+function filaTarea(x,n,mini){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+ const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
+ const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
+               :`<span class="mdtm ed ${mini?'enfijo':''}" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</span>`;
+ const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
+               :`<em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${x.d?fmtDur(x.d):'＋ duración'}</em>`;
+ const acc=`<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div>`;
+ if(mini)return `<div class="mdmini ${x.hecho?'hecho':''} ${ahora?'ahora':''}" style="border-left-color:${x.c.sol};background:${x.c.bg||'#fff'}">${hora}`+
+   `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>hasta ${fmtHora(x.fin)} · ${dur}</span></div>${acc}</div>`;
+ const alto=Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));
+ return `<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}">${hora}`+
+   `<span class="mdpill" style="height:${alto}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
+   `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${dur}${x.b?' · '+esc(x.b):''}</span></div>${acc}</div>`;}
+/* tiempo libre dentro de un bloque fijo (desde ahora si ya empezó) */
+let mdFijo=null;
+function subHuecos(f,dentro){const n=ahoraMin();let desde=Math.max(f.ini,Math.ceil(n/5)*5);const out=[];
+ dentro.filter(t=>!t.hecho).sort((a,b)=>a.ini-b.ini).forEach(t=>{if(t.fin<=desde)return;if(t.ini-desde>=MIN_HUECO)out.push({ini:desde,fin:t.ini});desde=Math.max(desde,t.fin);});
+ if(f.fin-desde>=MIN_HUECO)out.push({ini:desde,fin:f.fin});return out;}
+/* meter una tarea en el primer rato libre del bloque fijo donde quepa */
+function meterEnFijo(k,fk){const f=fijosHoy().find(x=>x.k===fk);if(!f)return;
+ const dentro=planHoy().filter(t=>t.ini>=f.ini&&t.ini<f.fin);const d=(k.indexOf('suelto:')===0?null:minutosDe(k))||SIN_DUR;
+ const g=subHuecos(f,dentro).find(x=>x.fin-x.ini>=d);
+ if(!g){toast('No cabe dentro de '+f.t+'.');return;}mdFijo=null;colocar(k,g.ini);}
+function fijoDrop(e,fk){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;meterEnFijo(k,fk);}
 function renderMiDia(){
  const box=document.getElementById('miDiaView');if(!box||viewMode!=='dia')return;
- const plan=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin(),fj=fijosHoy();
+ const todo=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin(),fj=fijosHoy();
+ /* las que empiezan mientras hay algo fijo van DENTRO de ese bloque (a la derecha); las demás, alineadas */
+ const fijoDe=x=>fj.find(f=>x.ini>=f.ini&&x.ini<f.fin);
+ const plan=todo.filter(x=>!fijoDe(x));
  const planeado=plan.reduce((s,x)=>s+(x.fin-x.ini),0),fijo=fj.reduce((s,x)=>s+(x.fin-x.ini),0);
  const disp=diaFin()-diaIni(),pct=Math.round((planeado+fijo)/disp*100);
  const tono=pct>100?'var(--dan)':pct>85?'var(--amb)':'var(--grn)';
@@ -1471,19 +1512,19 @@ function renderMiDia(){
  let tl='';
  filas.forEach(f=>{
    if(f.tipo==='fijo'){const x=f.x;const ahora=x.ini<=n&&n<x.fin;
-     tl+=`<div class="mdit fijo ${ahora?'ahora':''}"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="height:${alto(x)}px"></span>`+
-       `<div class="mdbd"><b>${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${fmtDur(x.fin-x.ini)} · horario fijo</span></div>`+
-       `<div class="mdacc"><button class="mini" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</button></div></div>`;return;}
-   if(f.tipo==='it'){const x=f.x;const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
-     const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
-     const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
-                   :`<span class="mdtm ed" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</span>`;
-     const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
-                   :`<em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${x.d?fmtDur(x.d):'＋ duración'}</em>`;
-     tl+=`<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}">${hora}`+
-       `<span class="mdpill" style="height:${alto(x)}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
-       `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${dur}${x.b?' · '+esc(x.b):''}</span></div>`+
-       `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
+     const dentro=todo.filter(t=>fijoDe(t)===x);const ocup=dentro.reduce((s,t)=>s+Math.min(t.fin,x.fin)-t.ini,0);
+     const subs=subHuecos(x,dentro),abierto=mdFijo===x.k,libre=subs.reduce((s,g)=>s+g.fin-g.ini,0);
+     let caja=dentro.map(t=>filaTarea(t,n,true)).join('');
+     caja+=`<span class="mdadd" onclick="mdFijo=${abierto?'null':`'${x.k}'`};renderMiDia()">${abierto?'cerrar':'＋ meter aquí'}</span>`;
+     if(abierto){const cands=[].concat(...band.map(b=>b.it)).filter(c=>subs.some(g=>(c.d||SIN_DUR)<=g.fin-g.ini));
+       caja+=`<div class="mdsug" style="margin-left:0"><div class="mdsugh">Libre dentro de ${esc(x.t)}: ${fmtDur(libre)||'nada'}</div>`+
+         (cands.length?cands.slice(0,8).map(c=>`<div class="mdcand" onclick="meterEnFijo('${c.k}','${x.k}')"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
+          :`<div class="lcempty">Nada de la bandeja cabe aquí.</div>`)+`</div>`;}
+     tl+=`<div class="mdit fijo ${ahora?'ahora':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="fijoDrop(event,'${x.k}')"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="min-height:${alto(x)}px;align-self:stretch"></span>`+
+       `<div class="mdbd"><b>${esc(x.t)} <span class="mdhoyno" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</span></b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · horario fijo${dentro.length?` · ${fmtDur(ocup)} ocupada de ${fmtDur(x.fin-x.ini)}`:''}</span>`+
+       `<div class="mdin2">${caja}</div></div>`+
+       `</div>`;return;}
+   if(f.tipo==='it'){tl+=filaTarea(f.x,n,false);}
    else{const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
      tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
        `<span class="mdline"></span><span class="mdgt" onclick="mdHueco=${abierto?'null':f.i};renderMiDia()">hueco ${fmtHora(g.ini)} – ${fmtHora(g.fin)} · ${fmtDur(cabe)} <b>${abierto?'cerrar':'＋ llenar'}</b></span></div>`;
