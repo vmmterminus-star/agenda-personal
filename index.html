@@ -200,6 +200,9 @@ input.add::placeholder{color:var(--mut)}
 .mv{width:22px;height:22px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--mut);font-size:9px;cursor:pointer;padding:0}
 .mv:disabled{opacity:.3;cursor:default}
 .sx{color:var(--hint);cursor:pointer;font-size:10px;padding:0 2px}
+.stin{border:1px solid transparent;border-radius:6px;background:transparent;font-family:inherit;color:var(--txt);padding:2px 5px;margin-left:-5px;outline:none;min-width:0;flex:1}
+.stin:focus{border-color:var(--acc);background:#fff}
+.subedit{flex:1;border:1px solid var(--acc);border-radius:6px;font-family:inherit;font-size:11.5px;color:var(--txt);padding:2px 6px;outline:none;min-width:0}
 .subadd{border:none;background:transparent;font-family:inherit;font-size:11.5px;color:var(--txt);padding:3px 0 0 24px;width:100%;outline:none}
 .subadd::placeholder{color:var(--hint)}
 
@@ -1535,7 +1538,7 @@ function renderPasos(areaKey,sg){
    const hecho=!!state[tk.id];const cur=(i===actual);
    const st=subs[tk.id]||[];
    let sub="";
-   st.forEach((s,j)=>{sub+=`<div class="substep ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="pasoSub('${tk.id}',${j},'t')">${s.done?'✓':''}</span><span style="flex:1">${esc(s.t)}</span><span class="sx" title="Borrar subpaso" onclick="pasoSub('${tk.id}',${j},'x')">✕</span></div>`;});
+   st.forEach((s,j)=>{sub+=`<div class="substep ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="pasoSub('${tk.id}',${j},'t')">${s.done?'✓':''}</span>${(pasoEd&&pasoEd.id===tk.id&&pasoEd.j===j)?`<input class="subedit" id="subEdit" value="${esc(s.t)}" onkeydown="pasoSubKey(event,'${tk.id}',${j})" onblur="pasoSubFin('${tk.id}',${j},this.value)">`:`<span style="flex:1;cursor:text" title="Toca para editar" onclick="pasoSubEditar('${tk.id}',${j})">${esc(s.t)}</span>`}<span class="sx" title="Borrar subpaso" onclick="pasoSub('${tk.id}',${j},'x')">✕</span></div>`;});
    sub+=`<input class="subadd" placeholder="＋ subpaso" onkeydown="pasoSubAdd(event,'${tk.id}')">`;
    const di=durOf(tk.id);const dur=di>=0?`<span class="tim">${DUR[di].t}</span>`:'';
    const d=dateOf(tk);const n=d?dayDiff(d):null;
@@ -1567,6 +1570,12 @@ function pasoMover(areaKey,sgEnc,id,dir){
 function pasoQuitar(ev,id){ev.stopPropagation();
  if(id.includes('|c|')){delTask(ev,id);return;}
  if(!confirm('¿Quitar este paso? Se va al cajón.'))return;archIt(null,id);}
+/* editar un subpaso ahí mismo: tocar el texto, escribir, Enter (o tocar fuera) guarda, Esc cancela */
+let pasoEd=null;
+function pasoSubEditar(id,j){pasoEd={id,j};render();setTimeout(()=>{const el=document.getElementById("subEdit");if(el){el.focus();el.select();}},30);}
+function pasoSubKey(e,id,j){if(e.key==="Enter"){e.preventDefault();pasoSubFin(id,j,e.target.value);}else if(e.key==="Escape"){pasoEd=null;render();}}
+function pasoSubFin(id,j,v){if(!pasoEd)return;pasoEd=null;const st=subs[id];v=(v||"").trim();
+ if(st&&st[j]&&v&&v!==st[j].t){st[j].t=v;save();}render();}
 function pasoSub(id,j,que){const st=subs[id];if(!st||!st[j])return;
  if(que==='x'){st.splice(j,1);if(!st.length)delete subs[id];}else st[j].done=!st[j].done;
  save();render();}
@@ -1855,7 +1864,7 @@ function pintaModal(){
  if(modalTab==='tarea'){
    const st=subs[id]||[];const hechos=st.filter(s=>s.done).length;
    let pasos="";
-   st.forEach((s,i)=>{pasos+=`<div class="stp ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="subToggle('${id}',${i})">${s.done?'✓':''}</span><span class="stt">${esc(s.t)}</span><span class="rx" onclick="subDel('${id}',${i})">✕</span></div>`;});
+   st.forEach((s,i)=>{pasos+=`<div class="stp ${s.done?'done':''}"><span class="sc ${s.done?'on':''}" onclick="subToggle('${id}',${i})">${s.done?'✓':''}</span><input class="stt stin" value="${esc(s.t)}" title="Toca para editar" onchange="subRen('${id}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()"><span class="rx" onclick="subDel('${id}',${i})">✕</span></div>`;});
    const gsel=borrador.g!==undefined?borrador.g:(tagOv[id]||'');
    const gc=tagPal(tagById(gsel));const gOn=!!tagById(gsel);
    let gOpts=`<option value="">— sin etiqueta —</option>`;
@@ -1913,6 +1922,7 @@ function setDur(id,i){guardaBorrador();timeSt[id]=i<0?"":DUR[i].t;
  save();render();pintaModal();}
 function subAdd(e,id){if(e.key!=='Enter')return;const v=e.target.value.trim();if(!v)return;
  guardaBorrador();if(!subs[id])subs[id]=[];subs[id].push({t:v,done:false});e.target.value='';save();render();pintaModal();}
+function subRen(id,i,v){v=(v||"").trim();if(!v||!subs[id]||!subs[id][i])return;guardaBorrador();subs[id][i].t=v;save();render();pintaModal();}
 function subToggle(id,i){guardaBorrador();subs[id][i].done=!subs[id][i].done;save();render();pintaModal();}
 function subDel(id,i){guardaBorrador();subs[id].splice(i,1);if(!subs[id].length)delete subs[id];save();render();pintaModal();}
 function saveDetail(id){
