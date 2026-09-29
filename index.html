@@ -276,6 +276,9 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .mdfjrow{display:flex;gap:9px;align-items:flex-start}
 .mdcarril{position:relative;flex:1;min-width:0}
 .mdcar{position:absolute;left:0;right:0;display:flex;gap:8px;align-items:flex-start;overflow:hidden}
+.mdch{width:46px;flex:none;text-align:right;font-size:10.5px;font-weight:600;color:var(--mut);padding-top:3px;white-space:nowrap}
+.mdch em{font-style:normal;cursor:pointer;border-bottom:1px dashed var(--line2)}
+.mdch .mdin{width:62px}
 .mdcp{width:12px;flex:none;align-self:stretch;border:1px solid;border-left-width:4px;border-radius:5px}
 .mdcar.hecho .mdcp{opacity:.45}
 .mdcb{flex:1;min-width:0;line-height:1.2;display:flex;align-items:baseline;gap:6px;padding-top:3px}
@@ -1515,8 +1518,8 @@ function filaCarril(x,f,n){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
  const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
                :(x.d?` · <em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${fmtDur(x.d)}</em>`:'');
  return `<div class="mdcar ${x.hecho?'hecho':''} ${ahora?'encurso':''} ${h>=44?'alto':''}" style="top:${top}px;height:${h}px">`+
-   `<span class="mdcp" style="background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
-   `<div class="mdcb"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${hora}${dur}</span></div>`+
+   `<span class="mdch">${hora}</span><span class="mdcp" style="background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
+   `<div class="mdcb"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${dur.replace(/^ · /,'')}</span></div>`+
    `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
 /* tiempo libre dentro de un bloque fijo (desde ahora si ya empezó) */
 let mdFijo=null;
