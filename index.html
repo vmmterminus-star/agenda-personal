@@ -261,6 +261,11 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .mdit.ahora .mdbd b{color:var(--acctx)}
 .mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums}
 .mdpill{width:26px;flex:none;border:1px solid;border-left-width:4px;border-radius:6px}
+.mdpill.fijo{background:repeating-linear-gradient(135deg,var(--soft) 0 5px,#fff 5px 9px);border-color:var(--line2);border-left-color:var(--hint)}
+.mdit.fijo .mdbd b{color:var(--mut);font-weight:500;cursor:default}
+.mdtm.ed,.mdbd em.ed{cursor:pointer;border-bottom:1px dashed var(--line2)}
+.mdbd em{font-style:normal}
+.mdin{width:78px;flex:none;font-family:inherit;font-size:12px;border:1px solid var(--acc);border-radius:6px;padding:2px 5px;outline:none;color:var(--txt)}
 .mdit.hecho .mdpill{opacity:.45}
 .mdbd{flex:1;min-width:0;padding-top:2px}
 .mdbd b{display:block;font-weight:600;font-size:13px;line-height:1.3;cursor:pointer;word-break:break-word}
@@ -1317,10 +1322,11 @@ function itemsHoy(){
    const d=minutosDe(tk.id);out.push({id:tk.id,t:txtOf(tk),ini,d,fin:ini+(d||SIN_DUR),col:colOf(areaObjOf(tk)).sol});});
  short.forEach((e,i)=>{if(!e.free||e.done||!e.hora)return;const ini=minutos(e.hora);if(ini==null)return;
    out.push({id:'suelto:'+i,t:e.t,ini,d:null,fin:ini+SIN_DUR,col:'#8A7263',suelto:i});});
+ fijosHoy().forEach(f=>out.push({id:f.k,t:f.t,ini:f.ini,d:f.fin-f.ini,fin:f.fin,col:'#A79E92',fijo:true}));
  return out.sort((a,b)=>a.ini-b.ini);}
 function ahoraMin(){const d=new Date();return d.getHours()*60+d.getMinutes();}
-function yaTermine(id){if(id.indexOf('suelto:')===0){cortaToggle(+id.slice(7));return;}toggle(id);}
-function abreItem(id){if(id.indexOf('suelto:')===0)return;openDetail(null,id);}
+function yaTermine(id){if(id.indexOf('fijo:')===0)return;if(id.indexOf('suelto:')===0){cortaToggle(+id.slice(7));return;}toggle(id);}
+function abreItem(id){if(id.indexOf('suelto:')===0||id.indexOf('fijo:')===0)return;openDetail(null,id);}
 function renderAhora(){
  const box=document.getElementById('ahoraBox'),dia=document.getElementById('diaBox');if(!box||!dia)return;
  const its=itemsHoy(),n=ahoraMin();
@@ -1335,7 +1341,7 @@ function renderAhora(){
      `<div class="ahnom">${esc(cur.t)}</div></div><div class="ahnum">${grande}</div></div>`+
      `<div class="ahbar"><i style="width:${pct}%"></i></div>`+
      `<div class="ahpie"><span>${sig?'Sigue: '+esc(sig.t)+' · '+fmtHora(sig.ini):'Es lo último con hora de hoy'}</span>`+
-     `<button class="mini" onclick="yaTermine('${cur.id}')">✓ ya terminé</button></div></div>`;
+     (cur.fijo?'':`<button class="mini" onclick="yaTermine('${cur.id}')">✓ ya terminé</button>`)+`</div></div>`;
  }else if(sig){
    const falta=sig.ini-n;
    const grande=falta<60?`${falta}<small>min</small>`:`${Math.floor(falta/60)}:${String(falta%60).padStart(2,'0')}<small>h</small>`;
@@ -1363,6 +1369,17 @@ function renderAhora(){
    midia = {ini, fin, prev:{id:{d,h}}, extra:{f, ids:[]}, no:{f, ids:[]}}
    ======================================================================= */
 const MIN_HUECO=15;
+/* horario fijo de cada semana (0=domingo … 6=sábado): [inicio, fin en minutos, nombre]. Se puede cambiar en midia.fijos. */
+const FIJOS_DEF={
+ 1:[[480,600,"Clase de Proyecto"],[660,840,"Clase de Urbanismo"],[900,1080,"Uniterra"]],
+ 2:[[600,720,"Clase de Costos"],[720,840,"Clase de Cine"],[900,1080,"Uniterra"]],
+ 3:[[480,600,"Clase de Proyecto"],[600,720,"Clase de Edificación"],[780,1080,"Uniterra"]],
+ 4:[[600,720,"Clase de Costos"],[780,1080,"Uniterra"]],
+ 5:[[540,1020,"Uniterra"]]};
+function fijosHoy(){const src=midia.fijos||FIJOS_DEF;const no=mdHoyLista("fno");
+ return (src[new Date().getDay()]||[]).map((f,i)=>({k:"fijo:"+i,ini:f[0],fin:f[1],t:f[2]})).filter(x=>no.indexOf(x.k)<0);}
+function fijoHoyNo(k){mdSetLista("fno",mdHoyLista("fno").concat([k]));save();render();}
+let mdEd=null;   /* {k, q:"h" (hora) o "d" (duración)} mientras se edita ahí mismo */
 let mdHueco=null,mdPicker=false,mdPickA=null,pDrag=null;
 function diaIni(){return midia.ini!=null?midia.ini:8*60;}
 function diaFin(){return midia.fin!=null?midia.fin:22*60;}
@@ -1395,7 +1412,9 @@ function bandeja(){
  return g.filter(x=>x.it.length);}
 /* huecos entre lo acomodado (desde ahora si ya empezó el día) */
 function huecos(){
- const plan=planHoy().filter(x=>!x.hecho),n=ahoraMin();let desde=Math.max(diaIni(),Math.ceil(n/5)*5);const out=[];
+ const n=ahoraMin();let desde=Math.max(diaIni(),Math.ceil(n/5)*5);const out=[];
+ /* ocupado = lo acomodado sin terminar + el horario fijo */
+ const plan=planHoy().filter(x=>!x.hecho).concat(fijosHoy()).sort((a,b)=>a.ini-b.ini);
  plan.forEach(x=>{if(x.fin<=desde)return;if(x.ini-desde>=MIN_HUECO)out.push({ini:desde,fin:x.ini});desde=Math.max(desde,x.fin);});
  if(diaFin()-desde>=MIN_HUECO)out.push({ini:desde,fin:diaFin()});
  return out;}
@@ -1423,6 +1442,15 @@ function hechoDia(k){if(k.indexOf('suelto:')===0){cortaToggle(+k.slice(7));retur
 function hoyNo(k){mdSetLista('no',mdHoyLista('no').concat([k]));save();render();}
 function elegirDeBloque(id,on){let l=mdHoyLista('extra').filter(x=>x!==id);if(on)l.push(id);mdSetLista('extra',l);save();render();}
 function setHorario(q,v){midia[q]=+v;save();render();}
+/* cambiar hora o duración ahí mismo en la línea de tiempo */
+function mdEditar(k,q){mdEd={k,q};renderMiDia();setTimeout(()=>{const el=document.getElementById("mdIn");if(el){el.focus();el.select();}},30);}
+function mdEdKey(e,k,q){if(e.key==="Enter"){e.preventDefault();mdEdFin(k,q,e.target.value);}else if(e.key==="Escape"){mdEd=null;renderMiDia();}}
+function mdEdFin(k,q,v){if(!mdEd)return;mdEd=null;v=(v||"").trim();
+ if(q==="h"){const m=minutos(v);if(m==null||!v){renderMiDia();return;}
+   if(k.indexOf("suelto:")===0){const e=short[+k.slice(7)];if(e)e.hora=fmtHora(m);}
+   else{if(!midia.prev)midia.prev={};if(!(k in midia.prev))midia.prev[k]={d:(k in dateOv)?dateOv[k]:null,h:(k in timeOv)?timeOv[k]:null};timeOv[k]=fmtHora(m);}}
+ else{const m=leeDur(v);if(m)durMin[k]=m;else if(!v)delete durMin[k];}
+ save();render();}
 function pDragStart(e){pDrag=e.currentTarget.dataset.k;e.currentTarget.classList.add('dragging');}
 function pDragEnd(e){e.currentTarget.classList.remove('dragging');pDrag=null;document.querySelectorAll('.mdgap.over').forEach(x=>x.classList.remove('over'));}
 function gapOver(e){if(!pDrag)return;e.preventDefault();e.currentTarget.classList.add('over');}
@@ -1430,19 +1458,31 @@ function gapLeave(e){e.currentTarget.classList.remove('over');}
 function gapDrop(e,ini){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;colocar(k,ini);}
 function renderMiDia(){
  const box=document.getElementById('miDiaView');if(!box||viewMode!=='dia')return;
- const plan=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin();
- const planeado=plan.reduce((s,x)=>s+(x.fin-x.ini),0),disp=diaFin()-diaIni(),pct=Math.round(planeado/disp*100);
+ const plan=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin(),fj=fijosHoy();
+ const planeado=plan.reduce((s,x)=>s+(x.fin-x.ini),0),fijo=fj.reduce((s,x)=>s+(x.fin-x.ini),0);
+ const disp=diaFin()-diaIni(),pct=Math.round((planeado+fijo)/disp*100);
  const tono=pct>100?'var(--dan)':pct>85?'var(--amb)':'var(--grn)';
  const hOpts=sel=>{let o='';for(let m=5*60;m<=24*60;m+=30)o+=`<option value="${m}" ${m===sel?'selected':''}>${fmtHora(m)}</option>`;return o;};
  /* línea de tiempo: lo acomodado y los huecos, en orden */
  const filas=[];plan.forEach(x=>filas.push({tipo:'it',ini:x.ini,x}));hs.forEach((g,i)=>filas.push({tipo:'gap',ini:g.ini,g,i}));
+ fj.forEach(x=>filas.push({tipo:'fijo',ini:x.ini,x}));
  filas.sort((a,b)=>a.ini-b.ini||(a.tipo==='gap'?1:-1));
+ const alto=x=>Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));
  let tl='';
  filas.forEach(f=>{
-   if(f.tipo==='it'){const x=f.x;const alto=Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
-     tl+=`<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}"><span class="mdtm">${fmtHora(x.ini)}</span>`+
-       `<span class="mdpill" style="height:${alto}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
-       `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${x.d?fmtDur(x.d):'sin duración'}${x.b?' · '+esc(x.b):''}</span></div>`+
+   if(f.tipo==='fijo'){const x=f.x;const ahora=x.ini<=n&&n<x.fin;
+     tl+=`<div class="mdit fijo ${ahora?'ahora':''}"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="height:${alto(x)}px"></span>`+
+       `<div class="mdbd"><b>${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${fmtDur(x.fin-x.ini)} · horario fijo</span></div>`+
+       `<div class="mdacc"><button class="mini" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</button></div></div>`;return;}
+   if(f.tipo==='it'){const x=f.x;const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+     const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
+     const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
+                   :`<span class="mdtm ed" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</span>`;
+     const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
+                   :`<em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${x.d?fmtDur(x.d):'＋ duración'}</em>`;
+     tl+=`<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}">${hora}`+
+       `<span class="mdpill" style="height:${alto(x)}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
+       `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${dur}${x.b?' · '+esc(x.b):''}</span></div>`+
        `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
    else{const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
      tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
@@ -1469,7 +1509,7 @@ function renderMiDia(){
  box.innerHTML=
   `<div class="pnl"><div class="mdhead"><span class="ph" style="background:var(--accbg);color:var(--acctx)">Mi día</span>`+
   `<span class="mdh">de <select onchange="setHorario('ini',this.value)">${hOpts(diaIni())}</select> a <select onchange="setHorario('fin',this.value)">${hOpts(diaFin())}</select></span></div>`+
-  `<div class="mdmeter"><span>Planeado ${fmtDur(planeado)||'0 min'} de ${fmtDur(disp)}</span>${pct>100?`<span style="color:var(--dantx)">no cabe: quita algo</span>`:''}</div>`+
+  `<div class="mdmeter"><span>${fijo?'Fijo '+fmtDur(fijo)+' · ':''}tareas ${fmtDur(planeado)||'0 min'} · de ${fmtDur(disp)}</span>${pct>100?`<span style="color:var(--dantx)">no cabe: quita algo</span>`:''}</div>`+
   `<div class="ahbar"><i style="width:${Math.min(100,pct)}%;background:${tono}"></i></div></div>`+
   `<div class="mdcols"><div class="pnl mdtl">${tl}</div>`+
   `<div class="pnl"><div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--soft);color:var(--mut)">Por acomodar</span></div>`+
