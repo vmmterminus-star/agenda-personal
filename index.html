@@ -428,6 +428,15 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .dchipB{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--mut);border:1px dashed var(--line2);
  border-radius:9px;padding:4px 9px;background:var(--card)}
 .dchipB.caj{background:var(--soft)}
+/* agenda escolar */
+#escAviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);opacity:0;transition:.25s;z-index:60;background:#33302C;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;display:flex;gap:14px;align-items:center;max-width:calc(100vw - 32px)}
+#escAviso.on{transform:translateX(-50%);opacity:1}
+#escAviso button{background:none;border:none;color:#F4C9B5;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0}
+.eschoja{display:flex;flex-direction:column;gap:6px}
+.eschoja button{text-align:left;font-family:inherit;font-size:13.5px;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--txt);padding:10px 12px;cursor:pointer}
+.eschoja button.pri{background:var(--accbg);border-color:var(--acc);color:var(--acctx);font-weight:600}
+.eschoja small{color:var(--hint);font-size:11px}
+.escmat{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:10px 0 5px}
 /* widgets del iPhone, en el menú */
 .wgit{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
 .wgmini{width:58px;height:60px;background:#FBF9F5;border:1px solid var(--line2);border-radius:10px;padding:5px;flex:none;
@@ -726,6 +735,7 @@ const BOKEY="agenda_blockorder_v1";   /* orden de los bloques (se sincroniza) */
 /* --- etiquetas de tipo: catálogo + asignación por tarea --- */
 const TGKEY="agenda_tags_v1",TGOKEY="agenda_tagov_v1";
 const DMKEY="agenda_durmin_v1";   /* duración exacta en minutos, por tarea (si la escribiste) */
+const ESCKEY="agenda_esccode_v1",EHKEY="agenda_eschora_v1";   /* código de la agenda escolar · horas de Mi día para tareas escolares */
 const MDKEY="agenda_midia_v1";   /* mi día: horario, fecha y hora previas de lo que acomodaste, lo elegido de los bloques */
 /* paleta cerrada de 8. El gris (índice 7) queda apartado para "sin etiqueta". */
 const TGPAL=[{k:'mor',n:'Morado',bg:'#EEEDFE',tx:'#3C3489'},
@@ -762,6 +772,7 @@ let tags=localStorage.getItem(TGKEY)?J(TGKEY,"[]"):TGSEED.map(t=>Object.assign({
 let tagOv=J(TGOKEY,"{}");
 let durMin=J(DMKEY,"{}");
 let midia=J(MDKEY,"{}");
+let escCode=J(ESCKEY,"\"\""),escHora=J(EHKEY,"{}");
 /* desde cuándo está cada cosa en «importa ahorita» (para el aviso de los 3 días). Las viejas cuentan desde hoy. */
 short.forEach(e=>{if(!e.at)e.at=todayStr();});
 let viewMode=localStorage.getItem(VMKEY)||"now";
@@ -777,7 +788,7 @@ function save(){
  S(AOVKEY,areaOv);S(SYKEY,synced);S(SMKEY,syncMem);S(CSGKEY,customSg);S(HBKEY,hiddenB);S(DSGKEY,deletedSg);
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
  S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);S(BOKEY,blockOrder);
- S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);S(MDKEY,midia);
+ S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);S(MDKEY,midia);S(ESCKEY,escCode);S(EHKEY,escHora);
  dirty=true;cambios++;schedulePush();
 }
 
@@ -823,6 +834,7 @@ function widgetBlob(){
  const corta=[];let cortaN=0;
  short.forEach(e=>{
    if(e.free){if(e.done)return;cortaN++;if(corta.length<25)corta.push({t:e.t,b:'',c:'#8A7263',f:'',h:e.hora||'',k:''});return;}
+   if(e.esc!=null){const t=escPorId(e.esc);if(!t||escSt(t.i)===2)return;cortaN++;if(corta.length<25)corta.push({t:t.t,b:'Agenda escolar',c:ESC_COL.sol,f:t.f,h:'',k:'__esc',s:t.m||''});return;}
    const tk=tkById(e.id);if(!tk||state[tk.id]||archived[tk.id])return;
    cortaN++;if(corta.length<25)corta.push(meta(tk));});
  const ahora=Date.now();
@@ -876,6 +888,7 @@ function widgetBlob(){
 
  /* colores de cada bloque, en el orden de la agenda (para agrupar la lista corta) */
  const colores=areas().filter(a=>!hiddenB[a.key]).map(a=>{const c=colOf(a);return {k:a.key,n:a.name,c:c.sol,bg:c.bg,tx:c.tx};});
+ if(escCode)colores.push({k:"__esc",n:"Agenda escolar",c:ESC_COL.sol,bg:ESC_COL.bg,tx:ESC_COL.tx});
  /* calendario: lo que tiene fecha desde el día 1 de este mes */
  const mes1=todayStr().slice(0,8)+'01';
  const cal=TK().filter(t=>activo(t)&&dateOf(t)&&dateOf(t)>=mes1)
@@ -998,7 +1011,7 @@ function areas(){const l=[INBOX].concat(SEED,customAreas).filter(a=>!deletedArea
  if(!blockOrder.length)return l;          // el orden que tú elegiste; los bloques nuevos van al final
  const pos=k=>{const i=blockOrder.indexOf(k);return i<0?999:i;};
  return l.map((a,i)=>({a,i})).sort((x,y)=>(pos(x.a.key)-pos(y.a.key))||(x.i-y.i)).map(x=>x.a);}
-function areaByKey(k){return [INBOX].concat(SEED,customAreas).find(a=>a.key===k);}
+function areaByKey(k){if(k==="__esc")return ESC_AREA;return [INBOX].concat(SEED,customAreas).find(a=>a.key===k);}
 function colOf(a){ // acepta el formato viejo (bg/fg/sgfg) y el nuevo (sol/bg/tx)
  if(!a)return{sol:"#8A7263",bg:"#EDE5DF",tx:"#5A4437"};
  if(a.sol)return{sol:a.sol,bg:a.bg,tx:a.tx};
@@ -1093,12 +1106,14 @@ function cortaAdd(e){if(e.key!=='Enter')return;const v=e.target.value.trim();if(
  short.push({free:true,id:"x"+Date.now().toString(36),t:v,done:false,at:todayStr()});e.target.value='';save();render();
  setTimeout(()=>{const el=document.getElementById('cortaInput');if(el)el.focus();},30);}
 function cortaToggle(i){const e=short[i];if(!e)return;
+ if(e.esc!=null){escMarcar(e.esc,2);return;}
  if(e.free){e.done=!e.done;}else{toggle(e.id);return;}
  save();render();}
 function cortaDel(i){const e=short[i];if(!e)return;
  if(e.free)short.splice(i,1);else short.splice(i,1);
  save();render();}
 function cortaEdit(i){const e=short[i];if(!e)return;
+ if(e.esc!=null){escHoja(e.esc);return;}
  if(!e.free){openDetail(null,e.id);return;}
  const v=prompt('Editar:',e.t);if(v!==null){e.t=v.trim()||e.t;save();render();}}
 function cortaVaciarGrises(){
@@ -1144,9 +1159,10 @@ function mtxLeave(ev){ev.currentTarget.classList.remove('over');}
 function quadAuto(i){const e=short[i];if(!e)return;delete e.q;save();render();}
 
 /* ---------- horas: leer y escribir sin abrir la tarea ---------- */
-function horaDe(e){if(e.free)return e.hora||'';const tk=tkById(e.id);return tk?timeOf(tk):'';}
+function horaDe(e){if(e.free)return e.hora||'';if(e.esc!=null){const h=escHora[e.esc];return h&&h.f===todayStr()?h.h:'';}const tk=tkById(e.id);return tk?timeOf(tk):'';}
 function setHora(i,v){const e=short[i];if(!e)return;v=(v||'').trim();
  if(e.free){if(v)e.hora=v;else delete e.hora;}
+ else if(e.esc!=null){if(v)escHora[e.esc]={f:todayStr(),h:v};else delete escHora[e.esc];}
  else{if(v)timeOv[e.id]=v;else delete timeOv[e.id];}
  save();render();}
 function horaEdit(i){qeHora=i;render();
@@ -1167,7 +1183,7 @@ function grpDrop(ev,areaKey){ev.preventDefault();ev.stopPropagation();ev.current
  if(areaKey==='__libres')return;
  moverABloque(i,areaKey);}
 /* el renglón de la lista corta número i se va al bloque (primera sección) */
-function moverABloque(i,areaKey){const e=short[i];if(!e)return;const a=areaByKey(areaKey);if(!a)return;
+function moverABloque(i,areaKey){const e=short[i];if(!e||areaKey==="__esc"||e.esc!=null)return;const a=areaByKey(areaKey);if(!a)return;
  const sg=sgNames(a)[0];
  if(e.free){const id=areaKey+"|c|"+Date.now();custom.push({id,area:areaKey,sg,t:e.t});
    if(e.done)state[id]=true;short[i]={id:id,at:e.at||todayStr()};save();render();return;}
@@ -1229,6 +1245,8 @@ function editorRapido(e,i){
  if(!e.free)h+=`<div class="qerow"><label></label><button class="mini" onclick="openDetail(null,'${e.id}')">Abrir la tarea completa</button></div>`;
  return h+`</div>`;}
 function datosFila(e){
+ if(e.esc!=null){const t=escPorId(e.esc);if(!t)return null;const x=escInfo(t);
+   return {texto:t.t,hecho:escSt(t.i)===2,area:ESC_AREA,col:ESC_COL,n:x.n,hora:horaDe(e),dur:-1,esc:true};}
  if(e.free)return {texto:e.t,hecho:!!e.done,area:null,col:null,n:null,hora:'',dur:-1};
  const tk=tkById(e.id);if(!tk)return null;
  const a=areaObjOf(tk);const d=dateOf(tk);
@@ -1252,8 +1270,8 @@ function filaCorta(e,i,opts){
  if(opts.estrella)h+=`<button class="star ${e.imp?'on':''}" title="Marcar como importante" onclick="cortaImp(${i})">${e.imp?'★':'☆'}</button>`;
  h+=`<span class="rc ${f.hecho?'on':''}" onclick="cortaToggle(${i})">${f.hecho?'✓':''}</span>`+
     ((opts.pastillaArea&&f.col)?`<span class="rdot" style="background:${f.col.sol}" title="${esc(f.area.name)}"></span>`:'')+
-    (e.free?'':(opts.tgIni?tgIniHTML(e.id):tgPill(e.id)))+
-    `<span class="rt" onclick="cortaEdit(${i})">${esc(f.texto)}</span>`;
+    (e.free||f.esc?'':(opts.tgIni?tgIniHTML(e.id):tgPill(e.id)))+
+    `<span class="rt" onclick="cortaEdit(${i})">${esc(f.texto)}</span>`+(f.esc?`<span class="tipo" style="background:${ESC_COL.bg};color:${ESC_COL.tx}">agenda escolar</span>`:'');
  if(opts.hora!==false){
    const hv=horaDe(e);
    if(qeHora===i)h+=`<input class="hin" id="horaIn" value="${esc(hv)}" placeholder="8 pm" onkeydown="horaKey(event,${i})" onblur="horaBlur(event,${i})">`;
@@ -1261,7 +1279,7 @@ function filaCorta(e,i,opts){
  }
  h+=pastillaCuando(f.n);
  if(opts.auto&&e.q!=null)h+=`<button class="mini" title="Volver a acomodarla sola por su fecha" onclick="quadAuto(${i})">auto</button>`;
- h+=`<button class="qeb ${qeOpen===e.id?'on':''}" title="Cambiar fecha, hora, duración o bloque aquí mismo" onclick="toggleQE('${e.id}')">⋯</button>`;
+ if(!f.esc)h+=`<button class="qeb ${qeOpen===e.id?'on':''}" title="Cambiar fecha, hora, duración o bloque aquí mismo" onclick="toggleQE('${e.id}')">⋯</button>`;
  h+=`<span class="rx" title="Bajar de la lista" onclick="cortaDel(${i})">✕</span></div>`;
  if(qeOpen===e.id)h+=editorRapido(e,i);
  return h;}
@@ -1329,7 +1347,7 @@ function vistaHoras(){
 function renderShort(){
  const box=document.getElementById('shortBox');
  const tks=TK();
- short=short.filter(e=>e.free||tks.some(t=>t.id===e.id));   // limpia referencias muertas
+ short=short.filter(e=>e.free||(e.esc!=null?(!escActiva()||(escCache.tar||[]).some(t=>String(t.i)===String(e.esc))):tks.some(t=>t.id===e.id)));   // limpia referencias muertas (las escolares solo si ya se leyó la agenda escolar)
  let rows;
  if(shortView==='bloque')rows=vistaBloque();
  else if(shortView==='midia')rows=vistaMiDia();
@@ -1359,11 +1377,12 @@ function itemsHoy(){
    const d=minutosDe(tk.id);out.push({id:tk.id,t:txtOf(tk),ini,d,fin:ini+(d||SIN_DUR),col:colOf(areaObjOf(tk)).sol});});
  short.forEach((e,i)=>{if(!e.free||e.done||!e.hora)return;const ini=minutos(e.hora);if(ini==null)return;
    out.push({id:'suelto:'+i,t:e.t,ini,d:null,fin:ini+SIN_DUR,col:'#8A7263',suelto:i});});
+ planHoy().filter(x=>x.k.indexOf('esc:')===0&&!x.hecho).forEach(x=>out.push({id:x.k,t:x.t,ini:x.ini,d:x.d,fin:x.fin,col:ESC_COL.sol}));
  fijosHoy().forEach(f=>out.push({id:f.k,t:f.t,ini:f.ini,d:f.fin-f.ini,fin:f.fin,col:'#A79E92',fijo:true}));
  return out.sort((a,b)=>a.ini-b.ini);}
 function ahoraMin(){const d=new Date();return d.getHours()*60+d.getMinutes();}
-function yaTermine(id){if(id.indexOf('fijo:')===0)return;if(id.indexOf('suelto:')===0){cortaToggle(+id.slice(7));return;}toggle(id);}
-function abreItem(id){if(id.indexOf('suelto:')===0||id.indexOf('fijo:')===0)return;openDetail(null,id);}
+function yaTermine(id){if(id.indexOf('fijo:')===0)return;if(id.indexOf('esc:')===0){escMarcar(id.slice(4),2);return;}if(id.indexOf('suelto:')===0){cortaToggle(+id.slice(7));return;}toggle(id);}
+function abreItem(id){if(id.indexOf('esc:')===0){escHoja(id.slice(4));return;}if(id.indexOf('suelto:')===0||id.indexOf('fijo:')===0)return;openDetail(null,id);}
 function renderAhora(){
  const box=document.getElementById('ahoraBox'),dia=document.getElementById('diaBox');if(!box||!dia)return;
  const its=itemsHoy(),n=ahoraMin();
@@ -1400,6 +1419,97 @@ function renderAhora(){
 }
 
 /* =======================================================================
+   AGENDA ESCOLAR — tareas de agenda-uni, de solo lectura + palomear
+   Acuerdo (ver agenda-uni/CLAUDE.md «Conexión con la agenda personal»):
+   - LEER solo escuela_sync <código escolar>__widget (data.tar) y las filas <código escolar>__hecha__*.
+   - PALOMEAR = upsert de <código escolar>__hecha__<i> con {v:1,i,st:2,ts}; deshacer = st:0.
+   - NUNCA escribir en <código escolar> ni en <código escolar>__widget.
+   - Los avisos de Pushover NO incluyen tareas escolares (no entran en widgetBlob().av).
+   Claves: esc:<i>. Lo que se acomoda en Mi día (hora solo aquí) va en escHora {i:{f,h}}.
+   ======================================================================= */
+const ESC_TABLA='escuela_sync';
+const ESC_COL={sol:'#55589A',bg:'#E6E6F3',tx:'#36386B'};
+const ESC_AREA={key:'__esc',name:'Agenda escolar',sol:ESC_COL.sol,bg:ESC_COL.bg,tx:ESC_COL.tx,groups:[],esc:true};
+let escCache=(()=>{try{return JSON.parse(localStorage.getItem('agenda_esccache')||'null')||{};}catch(e){return {};}})();
+let escOptim={};   /* palomitas recién mandadas, mientras llega la confirmación */
+function escActiva(){return !!(escCode&&escCache&&escCache.tar);}
+/* hechas según las filas __hecha__ (y lo recién palomeado aquí) */
+function escSt(i){const o=escOptim[i]||(escCache.hechas||{})[i];return o?o.st:0;}
+function escTareas(){if(!escActiva())return [];return escCache.tar.filter(t=>escSt(t.i)!==2);}
+function escPorId(i){return (escCache.tar||[]).find(t=>String(t.i)===String(i));}
+async function escCargar(){
+ if(!escCode||location.protocol==='file:')return;
+ const c=escCode,base=SUPA_URL+'/rest/v1/'+ESC_TABLA;
+ try{
+   const [w,h]=await Promise.all([
+     fetch(base+'?code=eq.'+encodeURIComponent(c+'__widget')+'&select=data',{headers:SUPA_HDR}).then(r=>r.ok?r.json():null),
+     fetch(base+'?code=like.'+encodeURIComponent(c+'__hecha__')+'*&select=code,data',{headers:SUPA_HDR}).then(r=>r.ok?r.json():[])]);
+   if(!w){escEstado('No pude leer tu agenda escolar.');return;}
+   if(!w.length){escEstado('No encontré ese código en tu agenda escolar.');return;}
+   const d=w[0].data||{},hechas={};
+   (h||[]).forEach(r=>{const x=r.data||{};if(x.i!=null)hechas[x.i]={st:x.st,ts:x.ts};});
+   escCache={tar:d.tar||[],app:d.app||'',hechas,ts:Date.now()};
+   Object.keys(escOptim).forEach(i=>{const o=escOptim[i],srv=hechas[i];if(srv&&srv.ts>=o.ts)delete escOptim[i];});
+   try{localStorage.setItem('agenda_esccache',JSON.stringify(escCache));}catch(e){}
+   escEstado('✓ '+escTareas().length+' tareas escolares');render();
+ }catch(e){escEstado('Sin conexión con la agenda escolar.');}}
+function escEstado(t){const el=document.getElementById('escStatus');if(el)el.textContent=t;}
+function escConectar(){const v=(document.getElementById('escCodeInput').value||'').trim();
+ escCode=v;save();escCache={};escEstado(v?'Conectando…':'Desconectada.');if(v)escCargar();else render();}
+/* palomear o deshacer: una fila __hecha__ por tarea (nunca toca las filas de la agenda escolar) */
+async function escMarcar(i,st){
+ const ts=Date.now();escOptim[i]={st,ts};render();
+ if(st===2)escAviso('Hecha en tu agenda escolar',()=>escMarcar(i,0));
+ try{const r=await fetch(SUPA_URL+'/rest/v1/'+ESC_TABLA+'?on_conflict=code',{method:'POST',
+     headers:Object.assign({},SUPA_HDR,{Prefer:'resolution=merge-duplicates,return=minimal'}),
+     body:JSON.stringify([{code:escCode+'__hecha__'+i,data:{v:1,i:i,st:st,ts:ts},updated_at:new Date().toISOString()}])});
+   if(!r.ok)throw new Error(r.status);
+   if(!escCache.hechas)escCache.hechas={};escCache.hechas[i]={st,ts};
+   try{localStorage.setItem('agenda_esccache',JSON.stringify(escCache));}catch(e){}
+ }catch(e){delete escOptim[i];render();escAviso('No se pudo marcar (sin conexión). Intenta de nuevo.');}}
+/* aviso flotante con «Deshacer» */
+let escAvisoT=null;
+function escAviso(txt,deshacer){let el=document.getElementById('escAviso');
+ if(!el){el=document.createElement('div');el.id='escAviso';document.body.appendChild(el);}
+ el.innerHTML=`<span>${esc(txt)}</span>`+(deshacer?`<button id="escDeshacer">Deshacer</button>`:'');
+ el.className='on';if(deshacer)document.getElementById('escDeshacer').onclick=()=>{el.className='';deshacer();};
+ clearTimeout(escAvisoT);escAvisoT=setTimeout(()=>{el.className='';},6000);}
+/* datos listos para pintar una tarea escolar */
+function escInfo(t){const n=dayDiff(t.f);
+ return {k:'esc:'+t.i,i:t.i,t:t.t,m:t.m||'',f:t.f,n,b:'Agenda escolar'+(t.m?' · '+t.m:''),c:ESC_COL};}
+function escCuando(n){return n<0?`${-n} día${n<-1?'s':''} tarde`:n===0?'vence hoy':n===1?'vence mañana':dLabel(addDays(todayStr(),n));}
+function escFicha(t){const x=escInfo(t);
+ return `<div class="nc ${x.n<0?'over':''}" onclick="escHoja('${x.i}')">`+
+   `<span class="abar" style="background:${ESC_COL.sol}"></span>`+
+   `<span class="ck" onclick="event.stopPropagation();escMarcar('${x.i}',2)"></span>`+
+   `<div class="nb"><div class="ntx">${esc(x.t)}</div>`+
+   `<div class="nmeta"><span class="anm" style="color:${ESC_COL.tx}">${esc(x.b)}</span>`+
+   `<span class="${x.n<0?'vencido':'tim'}">${escCuando(x.n)}</span></div></div>`+
+   `<button class="up ${escEnCorta(x.i)?'on':''}" title="Subir a lo que importa ahorita" onclick="event.stopPropagation();escSubir('${x.i}')">↑</button></div>`;}
+function escEnCorta(i){return short.some(e=>e.esc!=null&&String(e.esc)===String(i));}
+function escSubir(i){const j=short.findIndex(e=>e.esc!=null&&String(e.esc)===String(i));
+ if(j>=0)short.splice(j,1);else short.push({esc:i,at:todayStr()});save();render();}
+/* al tocar una: menú con lo que se puede hacer desde aquí */
+function escHoja(i){const t=escPorId(i);if(!t)return;const x=escInfo(t);
+ const card=document.getElementById('menuCard');
+ card.innerHTML=`<div style="font-size:16px;font-weight:600;margin-bottom:3px">${esc(x.t)}</div>`+
+  `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">${esc(x.b)} · límite ${esc((()=>{const p=t.f.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'}).split('.').join('');})())}</div>`+
+  `<div class="eschoja">`+
+  `<button class="pri" onclick="closeMenu();escMarcar('${i}',2)">✓ Marcar hecha</button>`+
+  `<button onclick="closeMenu();escSubir('${i}')">${escEnCorta(i)?'Bajar de':'↑ Subir a'} lo que importa ahorita</button>`+
+  `<button onclick="closeMenu();colocarSola('esc:${i}');setMode('dia')">◷ Acomodar en Mi día</button>`+
+  (escCache.app?`<button onclick="window.open('${esc(escCache.app)}','_blank')">↗ Abrir en la agenda escolar <small>(para cambiar fecha o nombre)</small></button>`:'')+
+  `<button onclick="closeMenu()">Cerrar</button></div>`;
+ document.getElementById('menuBg').style.display='flex';menuOpen=true;}
+/* bloque «Agenda escolar» en «En lo que estoy trabajando»: por materia */
+function escBloqueHTML(){
+ const ts=escTareas();const por={};ts.forEach(t=>{(por[t.m||'Sin materia']=por[t.m||'Sin materia']||[]).push(t);});
+ let h=`<div class="fsec"><div class="grpH" style="color:${ESC_COL.tx};border-bottom-color:${ESC_COL.sol}"><span class="gdot" style="background:${ESC_COL.sol}"></span>Agenda escolar</div>`;
+ if(!ts.length)h+=`<div class="lcempty" style="padding:6px 0">${escCode?'No hay tareas escolares pendientes.':'Conecta tu agenda escolar en ⋯ → Respaldo.'}</div>`;
+ Object.keys(por).sort().forEach(m=>{h+=`<div class="escmat">${esc(m)}</div>`+por[m].map(escFicha).join('');});
+ return {html:h+`</div>`,n:ts.length};}
+
+/* =======================================================================
    MI DÍA — armar el día en una línea de tiempo (tipo Structured)
    Acomodar una tarea = ponerle fecha de HOY y esa hora (así la tarjeta «Ahora»,
    la franja, el widget y los avisos la toman solos). Quitarla del día regresa
@@ -1431,6 +1541,9 @@ function planHoy(){
    out.push({k:tk.id,t:txtOf(tk),ini,d,fin:ini+(d||SIN_DUR),c:colOf(a),b:a?a.name:'',hecho:!!state[tk.id]});});
  short.forEach((e,i)=>{if(!e.free||!e.hora)return;const ini=minutos(e.hora);if(ini==null)return;
    out.push({k:'suelto:'+i,t:e.t,ini,d:null,fin:ini+SIN_DUR,c:{sol:'#8A7263',bg:'#EDE5DF',tx:'#5A4437'},b:'Pendiente suelto',hecho:!!e.done});});
+ /* tareas escolares acomodadas hoy (la hora vive solo aquí, en escHora) */
+ Object.keys(escHora).forEach(i=>{const p=escHora[i];if(!p||p.f!==hoy)return;const t=escPorId(i);if(!t)return;const ini=minutos(p.h);if(ini==null)return;
+   const d=minutosDe('esc:'+i);out.push({k:'esc:'+i,t:t.t,ini,d,fin:ini+(d||SIN_DUR),c:ESC_COL,b:'Agenda escolar'+(t.m?' · '+t.m:''),hecho:escSt(i)===2});});
  return out.sort((a,b)=>a.ini-b.ini);}
 /* la bandeja «Por acomodar», por grupos y sin repetir */
 function bandeja(){
@@ -1447,6 +1560,11 @@ function bandeja(){
    .forEach(tk=>{if(g[1].it.length<8&&pasa(tk.id))g[1].it.push(deTk(tk,{tag:dLabel(dateOf(tk))}));});
  TK().filter(t=>activo(t)&&dateOf(t)===hoy&&minutos(timeOf(t))==null).forEach(tk=>{if(pasa(tk.id))g[2].it.push(deTk(tk));});
  mdHoyLista('extra').forEach(id=>{const tk=tkById(id);if(tk&&activo(tk)&&pasa(id))g[3].it.push(deTk(tk));});
+ /* de la agenda escolar: lo vencido y lo de los próximos 3 días */
+ const ge={n:'De tu agenda escolar',it:[]};
+ escTareas().filter(t=>dayDiff(t.f)<=3).sort((a,b)=>a.f.localeCompare(b.f)).forEach(t=>{const k='esc:'+t.i;
+   if(pasa(k))ge.it.push(item(k,t.t+(t.m?' · '+t.m:''),minutosDe(k),ESC_COL,{b:'Agenda escolar',tag:dayDiff(t.f)<0?escCuando(dayDiff(t.f)):(dayDiff(t.f)===0?'hoy':null)}));});
+ g.push(ge);
  return g.filter(x=>x.it.length);}
 /* huecos entre lo acomodado (desde ahora si ya empezó el día) */
 function huecos(){
@@ -1459,7 +1577,8 @@ function huecos(){
 /* poner en el día a una hora */
 function colocar(k,ini){
  if(!midia.prev)midia.prev={};
- if(k.indexOf('suelto:')===0){const e=short[+k.slice(7)];if(!e)return;e.hora=fmtHora(ini);}
+ if(k.indexOf('esc:')===0){escHora[k.slice(4)]={f:todayStr(),h:fmtHora(ini)};}
+ else if(k.indexOf('suelto:')===0){const e=short[+k.slice(7)];if(!e)return;e.hora=fmtHora(ini);}
  else{if(!(k in midia.prev))midia.prev[k]={d:(k in dateOv)?dateOv[k]:null,h:(k in timeOv)?timeOv[k]:null};
    dateOv[k]=todayStr();timeOv[k]=fmtHora(ini);}
  mdHueco=null;save();render();}
@@ -1471,12 +1590,13 @@ function colocarSola(k){const d=(k.indexOf('suelto:')===0?null:minutosDe(k))||SI
  colocar(k,Math.ceil(fin/5)*5);toast('No cabía en ningún hueco: la puse al final del día.');}
 /* quitar del día: regresa la fecha y hora de antes */
 function quitarDelDia(k){
+ if(k.indexOf('esc:')===0){delete escHora[k.slice(4)];save();render();return;}
  if(k.indexOf('suelto:')===0){const e=short[+k.slice(7)];if(e)delete e.hora;save();render();return;}
  const p=(midia.prev||{})[k];
  if(p){if(p.d==null)delete dateOv[k];else dateOv[k]=p.d;if(p.h==null)delete timeOv[k];else timeOv[k]=p.h;delete midia.prev[k];}
  else delete timeOv[k];      // ya tenía fecha de hoy desde antes: solo se le quita la hora
  save();render();}
-function hechoDia(k){if(k.indexOf('suelto:')===0){cortaToggle(+k.slice(7));return;}toggle(k);}
+function hechoDia(k){if(k.indexOf('esc:')===0){const i=k.slice(4);escMarcar(i,escSt(i)===2?0:2);return;}if(k.indexOf('suelto:')===0){cortaToggle(+k.slice(7));return;}toggle(k);}
 function hoyNo(k){mdSetLista('no',mdHoyLista('no').concat([k]));save();render();}
 function elegirDeBloque(id,on){let l=mdHoyLista('extra').filter(x=>x!==id);if(on)l.push(id);mdSetLista('extra',l);save();render();}
 function setHorario(q,v){midia[q]=+v;save();render();}
@@ -1485,7 +1605,8 @@ function mdEditar(k,q){mdEd={k,q};renderMiDia();setTimeout(()=>{const el=documen
 function mdEdKey(e,k,q){if(e.key==="Enter"){e.preventDefault();mdEdFin(k,q,e.target.value);}else if(e.key==="Escape"){mdEd=null;renderMiDia();}}
 function mdEdFin(k,q,v){if(!mdEd)return;mdEd=null;v=(v||"").trim();
  if(q==="h"){const m=minutos(v);if(m==null||!v){renderMiDia();return;}
-   if(k.indexOf("suelto:")===0){const e=short[+k.slice(7)];if(e)e.hora=fmtHora(m);}
+   if(k.indexOf("esc:")===0){escHora[k.slice(4)]={f:todayStr(),h:fmtHora(m)};}
+   else if(k.indexOf("suelto:")===0){const e=short[+k.slice(7)];if(e)e.hora=fmtHora(m);}
    else{if(!midia.prev)midia.prev={};if(!(k in midia.prev))midia.prev[k]={d:(k in dateOv)?dateOv[k]:null,h:(k in timeOv)?timeOv[k]:null};timeOv[k]=fmtHora(m);}}
  else{const m=leeDur(v);if(m)durMin[k]=m;else if(!v)delete durMin[k];}
  save();render();}
@@ -1620,6 +1741,7 @@ function renderFoco(){
  /* solo se ven los bloques elegidos; el resto sale al tocar «＋ bloque» */
  const elegidos=foco.map(k=>areaByKey(k)).filter(a=>a&&!deletedAreas[a.key]);
  const resto=areas().filter(a=>!hiddenB[a.key]&&!foco.includes(a.key));
+ if(escCode&&!foco.includes("__esc"))resto.push(ESC_AREA);   /* la agenda escolar, como un bloque más */
  let chips=elegidos.map(a=>{const c=colOf(a);
    return `<button class="fchip on" style="background:${c.bg};color:${c.tx};border-color:${c.sol}" title="Quitar" onclick="focoToggle('${a.key}')">`+
           `<span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}<span class="fx">✕</span></button>`;}).join('');
@@ -1627,7 +1749,8 @@ function renderFoco(){
  if(focoMenu&&resto.length)chips+=`<div class="fmenu">`+resto.map(a=>{const c=colOf(a);
    return `<button class="fitem" onclick="focoMenu=false;focoToggle('${a.key}')"><span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}</button>`;}).join('')+`</div>`;
  let cuerpo="";let total=0;
- foco.forEach(k=>{const a=areaByKey(k);if(!a||deletedAreas[k])return;const c=colOf(a);
+ foco.forEach(k=>{if(k==="__esc"){const e=escBloqueHTML();total+=e.n;cuerpo+=e.html;return;}
+   const a=areaByKey(k);if(!a||deletedAreas[k])return;const c=colOf(a);
    const nombres=sgNames(a);
    let cols="";
    nombres.forEach(sg=>{
@@ -1741,10 +1864,14 @@ function renderEnergy(){
    return enLista(tk.id)||(n!==null&&n<=3);});
  const atras=pool.filter(overdue);
  const resto=pool.filter(t=>!overdue(t));
+ /* las de la agenda escolar: vencidas con las atrasadas; las de los próximos 3 días, con «sin estimar» */
+ const esc=escTareas().filter(t=>dayDiff(t.f)<=3);
+ const escAtr=esc.filter(t=>dayDiff(t.f)<0).sort((a,b)=>a.f.localeCompare(b.f)),escPronto=esc.filter(t=>dayDiff(t.f)>=0);
  let html="";
- if(atras.length){
-   html+=`<div class="secH" style="background:var(--danbg);color:var(--dantx)">Atrasada${atras.length>1?'s':''} · ${atras.length}</div>`;
+ if(atras.length||escAtr.length){const na=atras.length+escAtr.length;
+   html+=`<div class="secH" style="background:var(--danbg);color:var(--dantx)">Atrasada${na>1?'s':''} · ${na}</div>`;
    atras.sort((a,b)=>dayDiff(dateOf(a))-dayDiff(dateOf(b))).forEach(tk=>html+=fichaHTML(tk));
+   escAtr.forEach(t=>html+=escFicha(t));
  }
  GRUPOS.forEach((g,gi)=>{
    const items=resto.filter(tk=>{const i=durOf(tk.id);return i>=0&&DUR[i].g===gi;});
@@ -1754,9 +1881,10 @@ function renderEnergy(){
    items.forEach(tk=>html+=fichaHTML(tk));
  });
  const sin=resto.filter(tk=>durOf(tk.id)<0);
- if(sin.length){
-   html+=`<div class="secH" style="background:var(--soft);color:var(--mut);margin-top:12px">Sin estimar · ${sin.length}</div>`;
+ if(sin.length||escPronto.length){
+   html+=`<div class="secH" style="background:var(--soft);color:var(--mut);margin-top:12px">Sin estimar · ${sin.length+escPronto.length}</div>`;
    sin.forEach(tk=>html+=fichaHTML(tk));
+   escPronto.sort((a,b)=>a.f.localeCompare(b.f)).forEach(t=>html+=escFicha(t));
  }
  if(!html){
    const pend=TK().filter(t=>activo(t)).length;
@@ -2276,6 +2404,11 @@ function pintaMenu(){
   `<div style="display:flex;gap:6px;margin-top:6px"><button class="mini" onclick="exportData()">Generar y copiar</button><button class="mini" onclick="importData()">Importar</button></div>`+
   `<div class="msg" id="ioMsg"></div></div></div>`+
 
+  `<div class="pnl"><div class="pnlh" style="cursor:default"><span class="ph" style="background:${ESC_COL.bg};color:${ESC_COL.tx}">Tu agenda escolar</span></div>`+
+  `<div style="font-size:11.5px;color:var(--mut);line-height:1.5;margin-bottom:8px">Escribe el mismo código que usas en tu agenda escolar. Desde aquí solo se leen tus tareas y se marcan como hechas; nada más cambia allá.</div>`+
+  `<div class="frow"><input id="escCodeInput" placeholder="código de la agenda escolar" value="${esc(escCode)}" style="font-size:13px;border:1px solid var(--line2);border-radius:9px;padding:7px 10px;outline:none;width:100%"><button class="mini" onclick="escConectar()">Conectar</button></div>`+
+  `<div class="msg" id="escStatus">${escCode?(escActiva()?'✓ '+escTareas().length+' tareas escolares':'Conectada'):''}</div></div>`+
+
   wgPanel()+
 
   tgPanel()+
@@ -2478,6 +2611,10 @@ setInterval(renderAhora,30000);   // la tarjeta «Ahora» y la franja avanzan so
 /* si este dispositivo nunca guardó su "base", la de ahora es la última que coincidió con la nube */
 if(syncCode&&!baseGet())baseSet(localBlob());
 if(syncCode){syncCycle();setInterval(syncCycle,15000);}
+/* agenda escolar: se lee al abrir, cada minuto y al volver a la app */
+if(escCode){escCargar();}
+setInterval(()=>{if(escCode)escCargar();},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&escCode)escCargar();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&syncCode)syncCycle();});
 window.addEventListener('focus',()=>{if(syncCode)syncCycle();});
 </script>
