@@ -248,6 +248,44 @@ input.add::placeholder{color:var(--mut)}
 #colA,#sideCol{min-width:0}
 body.modo-now #page{display:block;max-width:780px}
 body.modo-now #sideCol{display:none}
+/* pestaña Mi día: solo el armado del día (y la tarjeta Ahora) */
+body.modo-dia #page{display:block;max-width:1100px}
+body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-dia #diaBox{display:none!important}
+.mdhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mdh{font-size:12px;color:var(--mut);margin-left:auto}
+.mdh select{font-family:inherit;font-size:12px;border:1px solid var(--line2);border-radius:7px;padding:2px 4px;background:#fff;color:var(--txt)}
+.mdmeter{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:8px}
+.mdcols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}
+.mdit{display:flex;gap:9px;align-items:flex-start;padding:4px 0}
+.mdit.hecho .mdbd b{text-decoration:line-through;opacity:.45}
+.mdit.ahora .mdbd b{color:var(--acctx)}
+.mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums}
+.mdpill{width:26px;flex:none;border:1px solid;border-left-width:4px;border-radius:6px}
+.mdit.hecho .mdpill{opacity:.45}
+.mdbd{flex:1;min-width:0;padding-top:2px}
+.mdbd b{display:block;font-weight:600;font-size:13px;line-height:1.3;cursor:pointer;word-break:break-word}
+.mdbd span{font-size:11px;color:var(--mut)}
+.mdacc{display:flex;gap:4px;align-items:center;flex:none}
+.mdgap{display:flex;align-items:center;gap:9px;padding:2px 0;border-radius:8px}
+.mdgap.over{outline:1.5px dashed var(--acc)}
+.mdline{width:52px;flex:none}
+.mdline::after{content:"";display:block;margin-left:calc(100% + 20px);border-left:1.5px dashed var(--line2);height:24px}
+.mdgt{font-size:11px;color:var(--hint);cursor:pointer;margin-left:26px}
+.mdgt b{font-weight:600;color:var(--acctx);border:1px dashed var(--acc);border-radius:7px;padding:1px 7px;margin-left:4px}
+.mdgap.on .mdgt{color:var(--acctx)}
+.mdsug{margin:2px 0 6px 87px;border:1px solid var(--acc);border-radius:10px;background:var(--accbg);padding:7px}
+.mdsugh{font-size:10.5px;font-weight:600;color:var(--acctx);letter-spacing:.04em;margin-bottom:4px}
+.mdcand{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px 8px;margin-bottom:4px;cursor:pointer;font-size:12.5px}
+.mdcand.dragging{opacity:.4}
+.mdcand .mdt{flex:1;min-width:0;line-height:1.3}
+.du{font-size:10.5px;background:var(--soft);border-radius:6px;padding:1px 6px;color:var(--mut);flex:none;white-space:nowrap}
+.mdgrp{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:8px 0 4px}
+.mdpick{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+.mdpa{display:flex;align-items:center;gap:7px;padding:7px 2px;cursor:pointer;font-size:12.5px;font-weight:600}
+.mdpa .n{font-weight:400;color:var(--hint);font-size:11px}
+.mdpa .ar{margin-left:auto}
+.mdpt{display:flex;gap:8px;align-items:flex-start;padding:5px 2px 5px 16px;font-size:12px;cursor:pointer}
+@media(max-width:760px){.mdcols{grid-template-columns:1fr}.mdsug{margin-left:0}}
 
 /* ---------- áreas modo Todo: dos columnas ---------- */
 #grid{column-count:2;column-gap:10px}
@@ -442,6 +480,7 @@ body.modo-now #sideCol{display:none}
 <div class="apd" id="fechaHoy"></div>
 <div class="tabs">
   <button class="tab" id="mNow" onclick="setMode('now')">Ahora</button>
+  <button class="tab" id="mDia" onclick="setMode('dia')">Mi día</button>
   <button class="tab" id="mAll" onclick="setMode('all')">Todo</button>
   <button class="mini" style="margin-left:auto" onclick="openMenu()">⋯</button>
 </div>
@@ -466,6 +505,7 @@ body.modo-now #sideCol{display:none}
       <button class="add" style="text-align:center;margin-bottom:8px" onclick="newAreaInput(this)">＋ nuevo bloque</button>
       <div class="arch" id="archBox" ondragover="archOver(event)" ondragleave="archLeave(event)" ondrop="archDrop(event)"></div>
     </div>
+    <div id="miDiaView" style="display:none"></div>
   </div>
 
   <div id="sideCol">
@@ -644,6 +684,7 @@ const BOKEY="agenda_blockorder_v1";   /* orden de los bloques (se sincroniza) */
 /* --- etiquetas de tipo: catálogo + asignación por tarea --- */
 const TGKEY="agenda_tags_v1",TGOKEY="agenda_tagov_v1";
 const DMKEY="agenda_durmin_v1";   /* duración exacta en minutos, por tarea (si la escribiste) */
+const MDKEY="agenda_midia_v1";   /* mi día: horario, fecha y hora previas de lo que acomodaste, lo elegido de los bloques */
 /* paleta cerrada de 8. El gris (índice 7) queda apartado para "sin etiqueta". */
 const TGPAL=[{k:'mor',n:'Morado',bg:'#EEEDFE',tx:'#3C3489'},
              {k:'ver',n:'Verde', bg:'#EAF3DE',tx:'#27500A'},
@@ -678,6 +719,7 @@ let blockOrder=J(BOKEY,"[]");
 let tags=localStorage.getItem(TGKEY)?J(TGKEY,"[]"):TGSEED.map(t=>Object.assign({},t));
 let tagOv=J(TGOKEY,"{}");
 let durMin=J(DMKEY,"{}");
+let midia=J(MDKEY,"{}");
 /* desde cuándo está cada cosa en «importa ahorita» (para el aviso de los 3 días). Las viejas cuentan desde hoy. */
 short.forEach(e=>{if(!e.at)e.at=todayStr();});
 let viewMode=localStorage.getItem(VMKEY)||"now";
@@ -693,7 +735,7 @@ function save(){
  S(AOVKEY,areaOv);S(SYKEY,synced);S(SMKEY,syncMem);S(CSGKEY,customSg);S(HBKEY,hiddenB);S(DSGKEY,deletedSg);
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
  S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);S(BOKEY,blockOrder);
- S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);
+ S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);S(MDKEY,midia);
  dirty=true;cambios++;schedulePush();
 }
 
@@ -1043,7 +1085,7 @@ function sDrop(e){e.preventDefault();const to=+e.currentTarget.dataset.i;if(sDra
  const it=short.splice(sDrag,1)[0];short.splice(to,0,it);save();render();}
 
 /* ---------- vistas de la lista corta ---------- */
-const VISTAS=[['libre','Libre'],['bloque','Por bloque'],['matriz','Matriz'],['horas','Por horas']];
+const VISTAS=[['libre','Libre'],['bloque','Por bloque'],['midia','Mi día'],['matriz','Matriz'],['horas','Por horas']];
 function setShortView(v){shortView=v;localStorage.setItem('agenda_shortview',v);qeOpen=null;render();}
 function cortaImp(i){const e=short[i];if(!e)return;e.imp=!e.imp;delete e.q;save();render();}
 /* urgente = fecha vencida o dentro de 2 días */
@@ -1248,6 +1290,7 @@ function renderShort(){
  short=short.filter(e=>e.free||tks.some(t=>t.id===e.id));   // limpia referencias muertas
  let rows;
  if(shortView==='bloque')rows=vistaBloque();
+ else if(shortView==='midia')rows=vistaMiDia();
  else if(shortView==='matriz')rows=vistaMatriz();
  else if(shortView==='horas')rows=vistaHoras();
  else rows=vistaLibre();
@@ -1301,7 +1344,7 @@ function renderAhora(){
  }
  box.innerHTML=h;
  /* franja del día */
- const ini=Math.min(DIA_INI,Math.floor(its[0].ini/60)*60),fin=Math.max(DIA_FIN,Math.ceil(its[its.length-1].fin/60)*60),span=fin-ini;
+ const ini=Math.min(diaIni(),Math.floor(its[0].ini/60)*60),fin=Math.max(diaFin(),Math.ceil(its[its.length-1].fin/60)*60),span=fin-ini;
  const pos=m=>((m-ini)/span*100).toFixed(2)+'%';
  let seg='';its.forEach(x=>{const w=Math.max(0.8,(x.fin-x.ini)/span*100);const pas=x.fin<=n,esta=x===cur;
    seg+=`<i class="dseg ${x.d?'':'sind'}" title="${esc(fmtHora(x.ini)+' · '+x.t)}" onclick="abreItem('${x.id}')" style="left:${pos(x.ini)};width:${x.d?w.toFixed(2)+'%':'3px'};background:${x.col};opacity:${esta?1:pas?.25:.55}"></i>`;});
@@ -1311,6 +1354,138 @@ function renderAhora(){
  dia.innerHTML=`<div class="pnlh" style="cursor:default;margin-bottom:6px"><span class="ph" style="background:var(--soft);color:var(--mut)">Tu día</span><span class="n">${its.length} con hora</span></div>`+
    `<div class="dtrack">${seg}${raya}</div><div class="dmarcas">${marcas}</div>`;
 }
+
+/* =======================================================================
+   MI DÍA — armar el día en una línea de tiempo (tipo Structured)
+   Acomodar una tarea = ponerle fecha de HOY y esa hora (así la tarjeta «Ahora»,
+   la franja, el widget y los avisos la toman solos). Quitarla del día regresa
+   la fecha y hora que tenía antes (midia.prev).
+   midia = {ini, fin, prev:{id:{d,h}}, extra:{f, ids:[]}, no:{f, ids:[]}}
+   ======================================================================= */
+const MIN_HUECO=15;
+let mdHueco=null,mdPicker=false,mdPickA=null,pDrag=null;
+function diaIni(){return midia.ini!=null?midia.ini:8*60;}
+function diaFin(){return midia.fin!=null?midia.fin:22*60;}
+function mdHoyLista(k){const h=todayStr();const o=midia[k];return (o&&o.f===h)?o.ids:[];}
+function mdSetLista(k,ids){midia[k]={f:todayStr(),ids};}
+/* lo que ya está en el día (con hora de hoy), incluidas las hechas */
+function planHoy(){
+ const hoy=todayStr(),out=[];
+ TK().forEach(tk=>{if(archived[tk.id]||dateOf(tk)!==hoy)return;const ini=minutos(timeOf(tk));if(ini==null)return;
+   const d=minutosDe(tk.id);const a=areaObjOf(tk);
+   out.push({k:tk.id,t:txtOf(tk),ini,d,fin:ini+(d||SIN_DUR),c:colOf(a),b:a?a.name:'',hecho:!!state[tk.id]});});
+ short.forEach((e,i)=>{if(!e.free||!e.hora)return;const ini=minutos(e.hora);if(ini==null)return;
+   out.push({k:'suelto:'+i,t:e.t,ini,d:null,fin:ini+SIN_DUR,c:{sol:'#8A7263',bg:'#EDE5DF',tx:'#5A4437'},b:'Pendiente suelto',hecho:!!e.done});});
+ return out.sort((a,b)=>a.ini-b.ini);}
+/* la bandeja «Por acomodar», por grupos y sin repetir */
+function bandeja(){
+ const hoy=todayStr(),ya=new Set(planHoy().map(x=>x.k)),no=new Set(mdHoyLista('no')),vistos=new Set();
+ const item=(k,t,d,c,extra)=>Object.assign({k,t,d,c},extra||{});
+ const deTk=(tk,extra)=>{const a=areaObjOf(tk);return item(tk.id,txtOf(tk),minutosDe(tk.id),colOf(a),Object.assign({b:a?a.name:''},extra));};
+ const pasa=k=>!ya.has(k)&&!no.has(k)&&!vistos.has(k)&&(vistos.add(k),true);
+ const g=[{n:'De lo que importa ahorita',it:[]},{n:'Ya venció',it:[]},{n:'Con fecha de hoy, sin hora',it:[]},{n:'Elegidas de tus bloques',it:[]}];
+ short.forEach((e,i)=>{
+   if(e.free){if(!e.done&&!e.hora&&pasa('suelto:'+i))g[0].it.push(item('suelto:'+i,e.t,null,{sol:'#8A7263'},{b:'Pendiente suelto'}));return;}
+   const tk=tkById(e.id);if(tk&&activo(tk)&&pasa(tk.id))g[0].it.push(deTk(tk));});
+ /* lo vencido del último mes, lo más reciente primero, máximo 8 */
+ TK().filter(t=>activo(t)&&dateOf(t)&&dayDiff(dateOf(t))<0&&dayDiff(dateOf(t))>=-30).sort((a,b)=>dayDiff(dateOf(b))-dayDiff(dateOf(a)))
+   .forEach(tk=>{if(g[1].it.length<8&&pasa(tk.id))g[1].it.push(deTk(tk,{tag:dLabel(dateOf(tk))}));});
+ TK().filter(t=>activo(t)&&dateOf(t)===hoy&&minutos(timeOf(t))==null).forEach(tk=>{if(pasa(tk.id))g[2].it.push(deTk(tk));});
+ mdHoyLista('extra').forEach(id=>{const tk=tkById(id);if(tk&&activo(tk)&&pasa(id))g[3].it.push(deTk(tk));});
+ return g.filter(x=>x.it.length);}
+/* huecos entre lo acomodado (desde ahora si ya empezó el día) */
+function huecos(){
+ const plan=planHoy().filter(x=>!x.hecho),n=ahoraMin();let desde=Math.max(diaIni(),Math.ceil(n/5)*5);const out=[];
+ plan.forEach(x=>{if(x.fin<=desde)return;if(x.ini-desde>=MIN_HUECO)out.push({ini:desde,fin:x.ini});desde=Math.max(desde,x.fin);});
+ if(diaFin()-desde>=MIN_HUECO)out.push({ini:desde,fin:diaFin()});
+ return out;}
+/* poner en el día a una hora */
+function colocar(k,ini){
+ if(!midia.prev)midia.prev={};
+ if(k.indexOf('suelto:')===0){const e=short[+k.slice(7)];if(!e)return;e.hora=fmtHora(ini);}
+ else{if(!(k in midia.prev))midia.prev[k]={d:(k in dateOv)?dateOv[k]:null,h:(k in timeOv)?timeOv[k]:null};
+   dateOv[k]=todayStr();timeOv[k]=fmtHora(ini);}
+ mdHueco=null;save();render();}
+/* tocar una de la bandeja: al primer hueco donde quepa (si no cabe en ninguno, al final del día) */
+function colocarSola(k){const d=(k.indexOf('suelto:')===0?null:minutosDe(k))||SIN_DUR;
+ const h=huecos().find(x=>x.fin-x.ini>=d);
+ if(h){colocar(k,h.ini);return;}
+ const plan=planHoy();const fin=plan.length?Math.max(...plan.map(x=>x.fin)):Math.max(diaIni(),ahoraMin());
+ colocar(k,Math.ceil(fin/5)*5);toast('No cabía en ningún hueco: la puse al final del día.');}
+/* quitar del día: regresa la fecha y hora de antes */
+function quitarDelDia(k){
+ if(k.indexOf('suelto:')===0){const e=short[+k.slice(7)];if(e)delete e.hora;save();render();return;}
+ const p=(midia.prev||{})[k];
+ if(p){if(p.d==null)delete dateOv[k];else dateOv[k]=p.d;if(p.h==null)delete timeOv[k];else timeOv[k]=p.h;delete midia.prev[k];}
+ else delete timeOv[k];      // ya tenía fecha de hoy desde antes: solo se le quita la hora
+ save();render();}
+function hechoDia(k){if(k.indexOf('suelto:')===0){cortaToggle(+k.slice(7));return;}toggle(k);}
+function hoyNo(k){mdSetLista('no',mdHoyLista('no').concat([k]));save();render();}
+function elegirDeBloque(id,on){let l=mdHoyLista('extra').filter(x=>x!==id);if(on)l.push(id);mdSetLista('extra',l);save();render();}
+function setHorario(q,v){midia[q]=+v;save();render();}
+function pDragStart(e){pDrag=e.currentTarget.dataset.k;e.currentTarget.classList.add('dragging');}
+function pDragEnd(e){e.currentTarget.classList.remove('dragging');pDrag=null;document.querySelectorAll('.mdgap.over').forEach(x=>x.classList.remove('over'));}
+function gapOver(e){if(!pDrag)return;e.preventDefault();e.currentTarget.classList.add('over');}
+function gapLeave(e){e.currentTarget.classList.remove('over');}
+function gapDrop(e,ini){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;colocar(k,ini);}
+function renderMiDia(){
+ const box=document.getElementById('miDiaView');if(!box||viewMode!=='dia')return;
+ const plan=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin();
+ const planeado=plan.reduce((s,x)=>s+(x.fin-x.ini),0),disp=diaFin()-diaIni(),pct=Math.round(planeado/disp*100);
+ const tono=pct>100?'var(--dan)':pct>85?'var(--amb)':'var(--grn)';
+ const hOpts=sel=>{let o='';for(let m=5*60;m<=24*60;m+=30)o+=`<option value="${m}" ${m===sel?'selected':''}>${fmtHora(m)}</option>`;return o;};
+ /* línea de tiempo: lo acomodado y los huecos, en orden */
+ const filas=[];plan.forEach(x=>filas.push({tipo:'it',ini:x.ini,x}));hs.forEach((g,i)=>filas.push({tipo:'gap',ini:g.ini,g,i}));
+ filas.sort((a,b)=>a.ini-b.ini||(a.tipo==='gap'?1:-1));
+ let tl='';
+ filas.forEach(f=>{
+   if(f.tipo==='it'){const x=f.x;const alto=Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+     tl+=`<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}"><span class="mdtm">${fmtHora(x.ini)}</span>`+
+       `<span class="mdpill" style="height:${alto}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
+       `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${x.d?fmtDur(x.d):'sin duración'}${x.b?' · '+esc(x.b):''}</span></div>`+
+       `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
+   else{const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
+     tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
+       `<span class="mdline"></span><span class="mdgt" onclick="mdHueco=${abierto?'null':f.i};renderMiDia()">hueco ${fmtHora(g.ini)} – ${fmtHora(g.fin)} · ${fmtDur(cabe)} <b>${abierto?'cerrar':'＋ llenar'}</b></span></div>`;
+     if(abierto){const cands=[].concat(...band.map(x=>x.it)).filter(c=>(c.d||SIN_DUR)<=cabe);
+       tl+=`<div class="mdsug"><div class="mdsugh">Cabe en ${fmtDur(cabe)}</div>`+
+         (cands.length?cands.slice(0,8).map(c=>`<div class="mdcand" onclick="colocar('${c.k}',${g.ini})"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
+          :`<div class="lcempty">Nada de la bandeja cabe aquí. Puedes dejarlo libre.</div>`)+`</div>`;}}});
+ if(!filas.length)tl=`<div class="lcempty">Tu día está vacío. Toca algo de «Por acomodar» y se pone en el primer hueco.</div>`;
+ /* bandeja */
+ let bd=band.map(g=>`<div class="mdgrp">${g.n}</div>`+g.it.map(c=>
+   `<div class="mdcand" draggable="true" data-k="${c.k}" ondragstart="pDragStart(event)" ondragend="pDragEnd(event)">`+
+   `<span class="gdot" style="background:${c.c.sol}"></span><span class="mdt" onclick="colocarSola('${c.k}')" title="Ponerla en el primer hueco donde quepa">${esc(c.t)}</span>`+
+   (c.tag?`<span class="tipo" style="background:var(--danbg);color:var(--dantx)">${esc(c.tag)}</span>`:'')+
+   `<span class="du">${c.d?fmtDur(c.d):'＋ duración'}</span><span class="rx" title="Hoy no" onclick="hoyNo('${c.k}')">✕</span></div>`).join('')).join('');
+ if(!bd)bd=`<div class="lcempty">No hay nada pendiente por acomodar.</div>`;
+ /* elegir de cada bloque */
+ let pk='';
+ if(mdPicker){const ext=new Set(mdHoyLista('extra'));
+   pk=`<div class="mdpick">`+areas().filter(a=>!hiddenB[a.key]).map(a=>{const c=colOf(a);const abierto=mdPickA===a.key;
+     const ts=TK().filter(t=>areaOf(t)===a.key&&activo(t));if(!ts.length)return'';
+     return `<div class="mdpa" onclick="mdPickA=${abierto?'null':`'${a.key}'`};renderMiDia()"><span class="gdot" style="background:${c.sol}"></span>${esc(a.name)}<span class="n">${ts.length}</span><span class="ar">${abierto?'▾':'▸'}</span></div>`+
+       (abierto?ts.map(t=>`<label class="mdpt"><input type="checkbox" ${ext.has(t.id)?'checked':''} onchange="elegirDeBloque('${t.id}',this.checked)"><span>${esc(txtOf(t))}</span></label>`).join(''):'');}).join('')+`</div>`;}
+ box.innerHTML=
+  `<div class="pnl"><div class="mdhead"><span class="ph" style="background:var(--accbg);color:var(--acctx)">Mi día</span>`+
+  `<span class="mdh">de <select onchange="setHorario('ini',this.value)">${hOpts(diaIni())}</select> a <select onchange="setHorario('fin',this.value)">${hOpts(diaFin())}</select></span></div>`+
+  `<div class="mdmeter"><span>Planeado ${fmtDur(planeado)||'0 min'} de ${fmtDur(disp)}</span>${pct>100?`<span style="color:var(--dantx)">no cabe: quita algo</span>`:''}</div>`+
+  `<div class="ahbar"><i style="width:${Math.min(100,pct)}%;background:${tono}"></i></div></div>`+
+  `<div class="mdcols"><div class="pnl mdtl">${tl}</div>`+
+  `<div class="pnl"><div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--soft);color:var(--mut)">Por acomodar</span></div>`+
+  `<div class="lcempty" style="margin:-2px 0 6px">Toca una para ponerla en el primer hueco donde quepa${matchMedia('(pointer:fine)').matches?', o arrástrala a un hueco':''}.</div>`+
+  bd+`<button class="add" style="margin-top:8px" onclick="mdPicker=!mdPicker;renderMiDia()">${mdPicker?'Listo':'＋ elegir de mis bloques'}</button>${pk}</div></div>`;
+}
+/* «Mi día» como vista de «Lo que importa ahorita» */
+function vistaMiDia(){
+ const plan=planHoy(),n=ahoraMin();
+ if(!plan.length)return `<div class="lcempty">Todavía no armas tu día. <button class="mini" onclick="setMode('dia')">Armar mi día</button></div>`;
+ const hechas=plan.filter(x=>x.hecho).length;
+ return plan.map(x=>{const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+   return `<div class="lcrow ${x.hecho?'done':''}" style="${ahora?'background:var(--accbg);border-radius:8px':''}"><span class="hrt" style="width:52px">${fmtHora(x.ini)}</span>`+
+     `<span class="rc ${x.hecho?'on':''}" onclick="hechoDia('${x.k}')">${x.hecho?'✓':''}</span><span class="rdot" style="background:${x.c.sol}"></span>`+
+     `<span class="rt" onclick="abreItem('${x.k}')">${esc(x.t)}</span>${ahora?'<span class="tipo" style="background:var(--acc);color:#fff">ahora</span>':''}<span class="tim">${x.d?fmtDur(x.d):''}</span></div>`;}).join('')+
+   `<div class="lcempty" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center"><span>${hechas} de ${plan.length} hechas</span><button class="mini" onclick="setMode('dia')">Editar mi día</button></div>`;}
 
 /* =======================================================================
    BLOQUE DE SELECCIÓN — las secciones que elijas, con sus columnas
@@ -2159,6 +2334,9 @@ function importData(){const code=document.getElementById('ioBox').value.trim();i
 function setMode(m){viewMode=m;
  document.getElementById('nowView').style.display=(m==='now')?'':'none';
  document.getElementById('allView').style.display=(m==='all')?'':'none';
+ document.getElementById('miDiaView').style.display=(m==='dia')?'':'none';
+ document.getElementById('mDia').classList.toggle('on',m==='dia');
+ document.body.classList.toggle('modo-dia',m==='dia');
  document.getElementById('mNow').classList.toggle('on',m==='now');
  document.getElementById('mAll').classList.toggle('on',m==='all');
  document.body.classList.toggle('modo-now',m==='now');
@@ -2166,7 +2344,7 @@ function setMode(m){viewMode=m;
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=='now')return;renderCd();renderDays();renderEnergy();renderStreak();}
 function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
-function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();}
+function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();renderMiDia();}
 
 /* arranque */
 document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
