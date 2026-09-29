@@ -258,15 +258,37 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .mdcols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}
 .mdit{display:flex;gap:9px;align-items:flex-start;padding:4px 0}
 .mdit.hecho .mdbd b{text-decoration:line-through;opacity:.45}
-.mdit.ahora .mdbd b{color:var(--acctx)}
+.mdit.encurso .mdbd b{color:var(--acctx)}
 .mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums}
 .mdpill{width:26px;flex:none;border:1px solid;border-left-width:4px;border-radius:6px}
 .mdin2{margin-top:6px;display:flex;flex-direction:column;gap:5px}
 .mdmini{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-left:4px solid;border-radius:8px;padding:5px 7px}
 .mdmini.hecho .mdbd b{text-decoration:line-through;opacity:.45}
-.mdmini.ahora{box-shadow:0 0 0 1px var(--acc)}
+.mdmini.encurso .mdbd b{color:var(--acctx)}
 .mdit.fijo .mdmini .mdbd b{font-size:12.5px;color:var(--txt);font-weight:600;cursor:pointer}
 .mdtm.enfijo{width:auto;min-width:44px;text-align:left;padding-top:0;font-size:10.5px}
+.mdfj{margin:4px 0 6px}
+.mdfj.over{outline:1.5px dashed var(--acc);border-radius:8px}
+.mdfjh{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-left:96px;margin-bottom:4px}
+.mdfjh b{font-weight:500;font-size:13px;color:var(--mut)}
+.mdfj.encurso .mdfjh b{color:var(--acctx);font-weight:600}
+.mdfjm{flex-basis:100%;font-size:11px;color:var(--hint)}
+.mdfjrow{display:flex;gap:9px;align-items:flex-start}
+.mdcarril{position:relative;flex:1;min-width:0}
+.mdcar{position:absolute;left:0;right:0;display:flex;gap:8px;align-items:flex-start;overflow:hidden}
+.mdcp{width:12px;flex:none;align-self:stretch;border:1px solid;border-left-width:4px;border-radius:5px}
+.mdcar.hecho .mdcp{opacity:.45}
+.mdcb{flex:1;min-width:0;line-height:1.2;display:flex;align-items:baseline;gap:6px;padding-top:3px}
+.mdcb b{flex:1;min-width:0;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.mdcar.alto .mdcb{flex-direction:column;align-items:flex-start;gap:1px}
+.mdcar.alto .mdcb b{flex:none;width:100%;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+.mdcar.hecho .mdcb b{text-decoration:line-through;opacity:.45}
+.mdcar.encurso .mdcb b{color:var(--acctx)}
+.mdcb span{flex:none;font-size:10.5px;color:var(--mut);white-space:nowrap}
+.mdcb em{font-style:normal}
+.mdcar .mdacc{padding-top:1px}
+.mdcar .mdacc .mini{padding:0 6px;font-size:10px}
+.mdfjpie{margin:6px 0 0 96px;display:flex;flex-direction:column;gap:5px}
 .mdhoyno{font-size:10px;font-weight:500;color:var(--hint);border:1px solid var(--line2);border-radius:7px;padding:0 6px;margin-left:6px;cursor:pointer;white-space:nowrap}
 .mdmini{flex-wrap:wrap;row-gap:2px}
 .mdmini .mdbd{order:3;flex-basis:100%}
@@ -1477,12 +1499,25 @@ function filaTarea(x,n,mini){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
  const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
                :`<em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${x.d?fmtDur(x.d):'＋ duración'}</em>`;
  const acc=`<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div>`;
- if(mini)return `<div class="mdmini ${x.hecho?'hecho':''} ${ahora?'ahora':''}" style="border-left-color:${x.c.sol};background:${x.c.bg||'#fff'}">${hora}`+
+ if(mini)return `<div class="mdmini ${x.hecho?'hecho':''} ${ahora?'encurso':''}" style="border-left-color:${x.c.sol};background:${x.c.bg||'#fff'}">${hora}`+
    `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>hasta ${fmtHora(x.fin)} · ${dur}</span></div>${acc}</div>`;
  const alto=Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));
- return `<div class="mdit ${x.hecho?'hecho':''} ${ahora?'ahora':''}">${hora}`+
+ return `<div class="mdit ${x.hecho?'hecho':''} ${ahora?'encurso':''}">${hora}`+
    `<span class="mdpill" style="height:${alto}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
    `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${dur}${x.b?' · '+esc(x.b):''}</span></div>${acc}</div>`;}
+/* una tarea dentro de un bloque fijo: barrita de color a su hora, del largo de lo que dura, y el texto al lado */
+const ESC_FIJO=1.2;   /* puntos por minuto dentro de los bloques fijos */
+function filaCarril(x,f,n){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+ const top=Math.round((x.ini-f.ini)*ESC_FIJO),h=Math.max(24,Math.round((Math.min(x.fin,f.fin)-x.ini)*ESC_FIJO)-2);
+ const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
+ const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
+               :`<em class="ed" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</em>`;
+ const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
+               :(x.d?` · <em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${fmtDur(x.d)}</em>`:'');
+ return `<div class="mdcar ${x.hecho?'hecho':''} ${ahora?'encurso':''} ${h>=44?'alto':''}" style="top:${top}px;height:${h}px">`+
+   `<span class="mdcp" style="background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
+   `<div class="mdcb"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${hora}${dur}</span></div>`+
+   `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
 /* tiempo libre dentro de un bloque fijo (desde ahora si ya empezó) */
 let mdFijo=null;
 function subHuecos(f,dentro){const n=ahoraMin();let desde=Math.max(f.ini,Math.ceil(n/5)*5);const out=[];
@@ -1514,16 +1549,20 @@ function renderMiDia(){
    if(f.tipo==='fijo'){const x=f.x;const ahora=x.ini<=n&&n<x.fin;
      const dentro=todo.filter(t=>fijoDe(t)===x);const ocup=dentro.reduce((s,t)=>s+Math.min(t.fin,x.fin)-t.ini,0);
      const subs=subHuecos(x,dentro),abierto=mdFijo===x.k,libre=subs.reduce((s,g)=>s+g.fin-g.ini,0);
-     let caja=dentro.map(t=>filaTarea(t,n,true)).join('');
+     let caja='';
      caja+=`<span class="mdadd" onclick="mdFijo=${abierto?'null':`'${x.k}'`};renderMiDia()">${abierto?'cerrar':'＋ meter aquí'}</span>`;
      if(abierto){const cands=[].concat(...band.map(b=>b.it)).filter(c=>subs.some(g=>(c.d||SIN_DUR)<=g.fin-g.ini));
        caja+=`<div class="mdsug" style="margin-left:0"><div class="mdsugh">Libre dentro de ${esc(x.t)}: ${fmtDur(libre)||'nada'}</div>`+
          (cands.length?cands.slice(0,8).map(c=>`<div class="mdcand" onclick="meterEnFijo('${c.k}','${x.k}')"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
           :`<div class="lcempty">Nada de la bandeja cabe aquí.</div>`)+`</div>`;}
-     tl+=`<div class="mdit fijo ${ahora?'ahora':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="fijoDrop(event,'${x.k}')"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="min-height:${alto(x)}px;align-self:stretch"></span>`+
-       `<div class="mdbd"><b>${esc(x.t)} <span class="mdhoyno" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</span></b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · horario fijo${dentro.length?` · ${fmtDur(ocup)} ocupada de ${fmtDur(x.fin-x.ini)}`:''}</span>`+
-       `<div class="mdin2">${caja}</div></div>`+
-       `</div>`;return;}
+     /* dos columnas: el bloque fijo rayado y, a su lado, cada tarea como barrita de color a su hora y del largo de lo que dura */
+     const H=Math.max(60,(x.fin-x.ini)*ESC_FIJO);
+     tl+=`<div class="mdfj ${ahora?'encurso':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="fijoDrop(event,'${x.k}')">`+
+       `<div class="mdfjh"><b>${esc(x.t)}</b><span class="mdhoyno" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</span>`+
+       `<span class="mdfjm">${fmtHora(x.ini)} – ${fmtHora(x.fin)}${dentro.length?` · ${fmtDur(ocup)} ocupada de ${fmtDur(x.fin-x.ini)}`:''}</span></div>`+
+       `<div class="mdfjrow"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="height:${H}px"></span>`+
+       `<div class="mdcarril" style="height:${H}px">${dentro.map(t=>filaCarril(t,x,n)).join('')}</div></div>`+
+       `<div class="mdfjpie">${caja}</div></div>`;return;}
    if(f.tipo==='it'){tl+=filaTarea(f.x,n,false);}
    else{const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
      tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
