@@ -256,66 +256,46 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .mdh select{font-family:inherit;font-size:12px;border:1px solid var(--line2);border-radius:7px;padding:2px 4px;background:#fff;color:var(--txt)}
 .mdmeter{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:8px}
 .mdcols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}
-.mdit{display:flex;gap:9px;align-items:flex-start;padding:4px 0}
-.mdit.hecho .mdbd b{text-decoration:line-through;opacity:.45}
+.mdit{display:flex;gap:9px;align-items:flex-start;padding:3px 0}
+.mdit.dentro .mdpill{margin-left:14px}
+.mdit.hecho .mdbd b{text-decoration:line-through;color:var(--hint);font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mdit.hecho .mdpill{opacity:.35}
 .mdit.encurso .mdbd b{color:var(--acctx)}
-.mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums}
-.mdpill{width:26px;flex:none;border:1px solid;border-left-width:4px;border-radius:6px}
-.mdin2{margin-top:6px;display:flex;flex-direction:column;gap:5px}
-.mdmini{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-left:4px solid;border-radius:8px;padding:5px 7px}
-.mdmini.hecho .mdbd b{text-decoration:line-through;opacity:.45}
-.mdmini.encurso .mdbd b{color:var(--acctx)}
-.mdit.fijo .mdmini .mdbd b{font-size:12.5px;color:var(--txt);font-weight:600;cursor:pointer}
-.mdtm.enfijo{width:auto;min-width:44px;text-align:left;padding-top:0;font-size:10.5px}
-.mdfj{margin:4px 0 6px}
-.mdfj.over{outline:1.5px dashed var(--acc);border-radius:8px}
-.mdfjh{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-left:96px;margin-bottom:4px}
-.mdfjh b{font-weight:500;font-size:13px;color:var(--mut)}
-.mdfj.encurso .mdfjh b{color:var(--acctx);font-weight:600}
-.mdfjm{flex-basis:100%;font-size:11px;color:var(--hint)}
-.mdfjrow{display:flex;gap:9px;align-items:flex-start}
-.mdcarril{position:relative;flex:1;min-width:0}
-.mdcar{position:absolute;left:0;right:0;display:flex;gap:8px;align-items:flex-start;overflow:hidden}
-.mdch{width:46px;flex:none;text-align:right;font-size:10.5px;font-weight:600;color:var(--mut);padding-top:3px;white-space:nowrap}
-.mdch em{font-style:normal;cursor:pointer;border-bottom:1px dashed var(--line2)}
-.mdch .mdin{width:62px}
-.mdcp{width:12px;flex:none;align-self:stretch;border:1px solid;border-left-width:4px;border-radius:5px}
-.mdcar.hecho .mdcp{opacity:.45}
-.mdcb{flex:1;min-width:0;line-height:1.2;display:flex;align-items:baseline;gap:6px;padding-top:3px}
-.mdcb b{flex:1;min-width:0;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.mdcar.alto .mdcb{flex-direction:column;align-items:flex-start;gap:1px}
-.mdcar.alto .mdcb b{flex:none;width:100%;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
-.mdcar.hecho .mdcb b{text-decoration:line-through;opacity:.45}
-.mdcar.encurso .mdcb b{color:var(--acctx)}
-.mdcb span{flex:none;font-size:10.5px;color:var(--mut);white-space:nowrap}
-.mdcb em{font-style:normal}
-.mdcar .mdacc{padding-top:1px}
-.mdcar .mdacc .mini{padding:0 6px;font-size:10px}
-.mdfjpie{margin:6px 0 0 96px;display:flex;flex-direction:column;gap:5px}
-.mdhoyno{font-size:10px;font-weight:500;color:var(--hint);border:1px solid var(--line2);border-radius:7px;padding:0 6px;margin-left:6px;cursor:pointer;white-space:nowrap}
-.mdmini{flex-wrap:wrap;row-gap:2px}
-.mdmini .mdbd{order:3;flex-basis:100%}
-.mdmini .mdacc{margin-left:auto}
-.mdadd{align-self:flex-start;font-size:11px;font-weight:600;color:var(--acctx);border:1px dashed var(--acc);border-radius:7px;padding:2px 8px;cursor:pointer}
-.mdit.fijo.over{outline:1.5px dashed var(--acc);border-radius:8px}
-.mdpill.fijo{background:repeating-linear-gradient(135deg,var(--soft) 0 5px,#fff 5px 9px);border-color:var(--line2);border-left-color:var(--hint)}
-.mdit.fijo .mdbd b{color:var(--mut);font-weight:500;cursor:default}
-.mdtm.ed,.mdbd em.ed{cursor:pointer;border-bottom:1px dashed var(--line2)}
-.mdbd em{font-style:normal}
-.mdin{width:78px;flex:none;font-family:inherit;font-size:12px;border:1px solid var(--acc);border-radius:6px;padding:2px 5px;outline:none;color:var(--txt)}
-.mdit.hecho .mdpill{opacity:.45}
+.mdtm{width:52px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--mut);padding-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mdtm.ed,.mdbd em.ed{cursor:pointer}
+.mdtm.ed:hover,.mdbd em.ed:hover{border-bottom:1px dashed var(--line2)}
+.mdpill{width:6px;flex:none;border-radius:4px;margin-top:2px}
 .mdbd{flex:1;min-width:0;padding-top:2px}
 .mdbd b{display:block;font-weight:600;font-size:13px;line-height:1.3;cursor:pointer;word-break:break-word}
-.mdbd span{font-size:11px;color:var(--mut)}
-.mdacc{display:flex;gap:4px;align-items:center;flex:none}
-.mdgap{display:flex;align-items:center;gap:9px;padding:2px 0;border-radius:8px}
+.mdbd span{display:block;font-size:11px;color:var(--mut);margin-top:1px}
+.mdbd em{font-style:normal}
+.mdin{width:78px;flex:none;font-family:inherit;font-size:12px;border:1px solid var(--acc);border-radius:6px;padding:2px 5px;outline:none;color:var(--txt)}
+.mdacc{display:flex;gap:2px;align-items:center;flex:none}
+.mdck{width:16px;height:16px;border:1.5px solid var(--line2);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;margin-top:1px}
+.mdck.on{background:var(--hint);border-color:var(--hint)}
+.mdmas{width:22px;text-align:center;color:var(--hint);cursor:pointer;font-size:14px;line-height:1;padding:2px 0;border-radius:6px}
+.mdmas:hover{background:var(--soft);color:var(--mut)}
+.mdmenu{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px 67px}
+.mdmenu.dentro{margin-left:75px}
+.mdmenu span{font-size:11px;font-weight:500;color:var(--mut);border:1px solid var(--line2);border-radius:7px;padding:3px 8px;cursor:pointer;background:var(--card)}
+.mdmenu span:last-child{color:var(--dantx)}
+.mdfj{display:flex;gap:9px;align-items:center;padding:3px 0}
+.mdfj.over{outline:1.5px dashed var(--acc);border-radius:8px}
+.mdfjb{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:var(--soft);border:1px solid transparent;border-radius:9px;padding:5px 4px 5px 10px;cursor:pointer}
+.mdfjb b{flex:1;min-width:0;font-weight:500;font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mdfjb>span:not(.mdmas){font-size:11px;color:var(--hint);white-space:nowrap}
+.mdfj.encurso .mdfjb{border-color:var(--acc);background:var(--accbg)}
+.mdfj.encurso .mdfjb b{color:var(--acctx)}
+.mdnoh{font-size:11px;color:var(--mut);margin-top:6px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line2)}
+.mdnow{position:relative;height:0;border-top:1.5px solid var(--dan);margin:6px 0 6px 61px}
+.mdnow span{position:absolute;left:-61px;top:-8px;width:52px;text-align:right;font-size:10.5px;font-weight:600;color:var(--dan)}
+.mdgap{display:flex;align-items:center;gap:9px;padding:3px 0;border-radius:8px}
 .mdgap.over{outline:1.5px dashed var(--acc)}
-.mdline{width:52px;flex:none}
-.mdline::after{content:"";display:block;margin-left:calc(100% + 20px);border-left:1.5px dashed var(--line2);height:24px}
-.mdgt{font-size:11px;color:var(--hint);cursor:pointer;margin-left:26px}
-.mdgt b{font-weight:600;color:var(--acctx);border:1px dashed var(--acc);border-radius:7px;padding:1px 7px;margin-left:4px}
-.mdgap.on .mdgt{color:var(--acctx)}
-.mdsug{margin:2px 0 6px 87px;border:1px solid var(--acc);border-radius:10px;background:var(--accbg);padding:7px}
+.mdgap .mdtm{color:var(--hint);font-weight:500;padding-top:0}
+.mdgb{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;border:1px dashed var(--line2);border-radius:9px;padding:5px 10px;font-size:11.5px;color:var(--hint);cursor:pointer}
+.mdgb b{font-weight:600;color:var(--acctx)}
+.mdgap.on .mdgb{border-color:var(--acc);color:var(--acctx)}
+.mdsug{margin:2px 0 6px 61px;border:1px solid var(--acc);border-radius:10px;background:var(--accbg);padding:7px}
 .mdsugh{font-size:10.5px;font-weight:600;color:var(--acctx);letter-spacing:.04em;margin-bottom:4px}
 .mdcand{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px 8px;margin-bottom:4px;cursor:pointer;font-size:12.5px}
 .mdcand.dragging{opacity:.4}
@@ -415,6 +395,7 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .ahnum em{display:block;font-style:normal;font-size:10.5px;font-weight:400;color:var(--mut)}
 .ahbar{height:6px;border-radius:4px;background:var(--soft);overflow:hidden;margin-top:8px}
 .ahbar i{display:block;height:100%;background:var(--acc)}
+.mdmeter .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 4px 0 2px;vertical-align:0}
 .ahpie{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11.5px;color:var(--mut)}
 .ahpie span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dtrack{position:relative;height:22px;border-radius:6px;background:var(--soft);overflow:hidden}
@@ -1615,35 +1596,27 @@ function pDragEnd(e){e.currentTarget.classList.remove('dragging');pDrag=null;doc
 function gapOver(e){if(!pDrag)return;e.preventDefault();e.currentTarget.classList.add('over');}
 function gapLeave(e){e.currentTarget.classList.remove('over');}
 function gapDrop(e,ini){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;colocar(k,ini);}
-/* una tarea en la línea de tiempo. mini = dentro de un bloque fijo (a la derecha, más compacta) */
-function filaTarea(x,n,mini){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
+/* una tarea en la línea de tiempo (igual afuera que dentro de un bloque fijo): hora, barrita de color del largo de lo que dura, texto, casilla y ⋯ */
+let mdMenu=null;   /* la tarea o el bloque fijo con su menú ⋯ abierto (no se guarda) */
+function mdMenuTog(k){mdMenu=mdMenu===k?null:k;renderMiDia();}
+function filaTarea(x,n,dentro){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
  const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
  const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
-               :`<span class="mdtm ed ${mini?'enfijo':''}" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</span>`;
- const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
-               :`<em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${x.d?fmtDur(x.d):'＋ duración'}</em>`;
- const acc=`<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div>`;
- if(mini)return `<div class="mdmini ${x.hecho?'hecho':''} ${ahora?'encurso':''}" style="border-left-color:${x.c.sol};background:${x.c.bg||'#fff'}">${hora}`+
-   `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>hasta ${fmtHora(x.fin)} · ${dur}</span></div>${acc}</div>`;
- const alto=Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));
- return `<div class="mdit ${x.hecho?'hecho':''} ${ahora?'encurso':''}">${hora}`+
-   `<span class="mdpill" style="height:${alto}px;background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
-   `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${fmtHora(x.ini)} – ${fmtHora(x.fin)} · ${dur}${x.b?' · '+esc(x.b):''}</span></div>${acc}</div>`;}
-/* una tarea dentro de un bloque fijo: barrita de color a su hora, del largo de lo que dura, y el texto al lado */
-const ESC_FIJO=1.2;   /* puntos por minuto dentro de los bloques fijos */
-function filaCarril(x,f,n){const ahora=!x.hecho&&x.ini<=n&&n<x.fin;
- const top=Math.round((x.ini-f.ini)*ESC_FIJO),h=Math.max(24,Math.round((Math.min(x.fin,f.fin)-x.ini)*ESC_FIJO)-2);
- const edH=mdEd&&mdEd.k===x.k&&mdEd.q==='h',edD=mdEd&&mdEd.k===x.k&&mdEd.q==='d';
- const hora=edH?`<input class="mdin" id="mdIn" value="${esc(fmtHora(x.ini))}" onkeydown="mdEdKey(event,'${x.k}','h')" onblur="mdEdFin('${x.k}','h',this.value)">`
-               :`<em class="ed" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</em>`;
- const dur=x.k.indexOf('suelto:')===0?'':edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
-               :(x.d?` · <em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${fmtDur(x.d)}</em>`:'');
- return `<div class="mdcar ${x.hecho?'hecho':''} ${ahora?'encurso':''} ${h>=44?'alto':''}" style="top:${top}px;height:${h}px">`+
-   `<span class="mdch">${hora}</span><span class="mdcp" style="background:${x.c.bg||'var(--soft)'};border-color:${x.c.sol}55;border-left-color:${x.c.sol}"></span>`+
-   `<div class="mdcb"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b><span>${dur.replace(/^ · /,'')}</span></div>`+
-   `<div class="mdacc"><button class="mini" title="Hecha" onclick="hechoDia('${x.k}')">${x.hecho?'↺':'✓'}</button><span class="rx" title="Quitar del día" onclick="quitarDelDia('${x.k}')">✕</span></div></div>`;}
+               :`<span class="mdtm ed" title="Toca para cambiar la hora" onclick="mdEditar('${x.k}','h')">${fmtHora(x.ini)}</span>`;
+ const dur=edD?`<input class="mdin" id="mdIn" value="${x.d?esc(fmtDur(x.d)):''}" placeholder="45 min" onkeydown="mdEdKey(event,'${x.k}','d')" onblur="mdEdFin('${x.k}','d',this.value)">`
+          :(x.d?`hasta ${fmtHora(x.fin)} · <em class="ed" title="Toca para cambiar cuánto dura" onclick="mdEditar('${x.k}','d')">${fmtDur(x.d)}</em>`:'');
+ const sub=x.hecho?'':[dur,x.b?esc(x.b):''].filter(Boolean).join(' · ');
+ const alto=x.hecho?14:Math.max(18,Math.min(64,Math.round((x.fin-x.ini)*0.5)));
+ const abierto=mdMenu===x.k,suelto=x.k.indexOf('suelto:')===0;
+ return `<div class="mdit ${x.hecho?'hecho':''} ${ahora?'encurso':''} ${dentro?'dentro':''}">${hora}`+
+   `<span class="mdpill" style="height:${alto}px;background:${x.c.sol}"></span>`+
+   `<div class="mdbd"><b onclick="abreItem('${x.k}')">${esc(x.t)}</b>${sub?`<span>${sub}</span>`:''}</div>`+
+   `<div class="mdacc"><span class="mdck ${x.hecho?'on':''}" title="${x.hecho?'Deshacer':'Hecha'}" onclick="hechoDia('${x.k}')">${x.hecho?'✓':''}</span>`+
+   `<span class="mdmas" title="Más" onclick="mdMenuTog('${x.k}')">⋯</span></div></div>`+
+   (abierto?`<div class="mdmenu ${dentro?'dentro':''}"><span onclick="mdMenu=null;mdEditar('${x.k}','h')">Cambiar hora</span>`+
+     (suelto?'':`<span onclick="mdMenu=null;mdEditar('${x.k}','d')">${x.d?'Cambiar duración':'Ponerle duración'}</span>`)+
+     `<span onclick="mdMenu=null;quitarDelDia('${x.k}')">Quitar del día</span></div>`:'');}
 /* tiempo libre dentro de un bloque fijo (desde ahora si ya empezó) */
-let mdFijo=null;
 function subHuecos(f,dentro){const n=ahoraMin();let desde=Math.max(f.ini,Math.ceil(n/5)*5);const out=[];
  dentro.filter(t=>!t.hecho).sort((a,b)=>a.ini-b.ini).forEach(t=>{if(t.fin<=desde)return;if(t.ini-desde>=MIN_HUECO)out.push({ini:desde,fin:t.ini});desde=Math.max(desde,t.fin);});
  if(f.fin-desde>=MIN_HUECO)out.push({ini:desde,fin:f.fin});return out;}
@@ -1651,50 +1624,44 @@ function subHuecos(f,dentro){const n=ahoraMin();let desde=Math.max(f.ini,Math.ce
 function meterEnFijo(k,fk){const f=fijosHoy().find(x=>x.k===fk);if(!f)return;
  const dentro=planHoy().filter(t=>t.ini>=f.ini&&t.ini<f.fin);const d=(k.indexOf('suelto:')===0?null:minutosDe(k))||SIN_DUR;
  const g=subHuecos(f,dentro).find(x=>x.fin-x.ini>=d);
- if(!g){toast('No cabe dentro de '+f.t+'.');return;}mdFijo=null;colocar(k,g.ini);}
+ if(!g){toast('No cabe dentro de '+f.t+'.');return;}mdMenu=null;colocar(k,g.ini);}
 function fijoDrop(e,fk){if(!pDrag)return;e.preventDefault();const k=pDrag;pDrag=null;meterEnFijo(k,fk);}
 function renderMiDia(){
  const box=document.getElementById('miDiaView');if(!box||viewMode!=='dia')return;
  const todo=planHoy(),hs=huecos(),band=bandeja(),n=ahoraMin(),fj=fijosHoy();
- /* las que empiezan mientras hay algo fijo van DENTRO de ese bloque (a la derecha); las demás, alineadas */
+ /* las que empiezan mientras hay algo fijo van debajo de ese bloque, con sangría; las demás, alineadas */
  const fijoDe=x=>fj.find(f=>x.ini>=f.ini&&x.ini<f.fin);
  const plan=todo.filter(x=>!fijoDe(x));
  const planeado=plan.reduce((s,x)=>s+(x.fin-x.ini),0),fijo=fj.reduce((s,x)=>s+(x.fin-x.ini),0);
  const disp=diaFin()-diaIni(),pct=Math.round((planeado+fijo)/disp*100);
  const tono=pct>100?'var(--dan)':pct>85?'var(--amb)':'var(--grn)';
  const hOpts=sel=>{let o='';for(let m=5*60;m<=24*60;m+=30)o+=`<option value="${m}" ${m===sel?'selected':''}>${fmtHora(m)}</option>`;return o;};
- /* línea de tiempo: lo acomodado y los huecos, en orden */
- const filas=[];plan.forEach(x=>filas.push({tipo:'it',ini:x.ini,x}));hs.forEach((g,i)=>filas.push({tipo:'gap',ini:g.ini,g,i}));
+ /* línea de tiempo en orden: bloques fijos (una sola línea), tareas, huecos libres y la línea de «ahora» */
+ const ORD={fijo:0,it:1,now:2,gap:3};
+ const filas=[];todo.forEach(x=>filas.push({tipo:'it',ini:x.ini,x,dentro:!!fijoDe(x)}));hs.forEach((g,i)=>filas.push({tipo:'gap',ini:g.ini,g,i}));
  fj.forEach(x=>filas.push({tipo:'fijo',ini:x.ini,x}));
- filas.sort((a,b)=>a.ini-b.ini||(a.tipo==='gap'?1:-1));
- const alto=x=>Math.max(34,Math.min(150,Math.round((x.fin-x.ini)*0.8)));
+ if(filas.length&&n>=diaIni()&&n<=diaFin())filas.push({tipo:'now',ini:n});
+ filas.sort((a,b)=>a.ini-b.ini||ORD[a.tipo]-ORD[b.tipo]);
+ const cand=(lista,cabe,accion)=>lista.length?lista.slice(0,8).map(c=>`<div class="mdcand" onclick="${accion(c)}"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
+   :`<div class="lcempty">Nada de la bandeja cabe aquí.</div>`;
+ const todas=[].concat(...band.map(b=>b.it));
  let tl='';
  filas.forEach(f=>{
-   if(f.tipo==='fijo'){const x=f.x;const ahora=x.ini<=n&&n<x.fin;
-     const dentro=todo.filter(t=>fijoDe(t)===x);const ocup=dentro.reduce((s,t)=>s+Math.min(t.fin,x.fin)-t.ini,0);
-     const subs=subHuecos(x,dentro),abierto=mdFijo===x.k,libre=subs.reduce((s,g)=>s+g.fin-g.ini,0);
-     let caja='';
-     caja+=`<span class="mdadd" onclick="mdFijo=${abierto?'null':`'${x.k}'`};renderMiDia()">${abierto?'cerrar':'＋ meter aquí'}</span>`;
-     if(abierto){const cands=[].concat(...band.map(b=>b.it)).filter(c=>subs.some(g=>(c.d||SIN_DUR)<=g.fin-g.ini));
-       caja+=`<div class="mdsug" style="margin-left:0"><div class="mdsugh">Libre dentro de ${esc(x.t)}: ${fmtDur(libre)||'nada'}</div>`+
-         (cands.length?cands.slice(0,8).map(c=>`<div class="mdcand" onclick="meterEnFijo('${c.k}','${x.k}')"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
-          :`<div class="lcempty">Nada de la bandeja cabe aquí.</div>`)+`</div>`;}
-     /* dos columnas: el bloque fijo rayado y, a su lado, cada tarea como barrita de color a su hora y del largo de lo que dura */
-     const H=Math.max(60,(x.fin-x.ini)*ESC_FIJO);
+   if(f.tipo==='now'){tl+=`<div class="mdnow"><span>ahora</span></div>`;return;}
+   if(f.tipo==='fijo'){const x=f.x;const ahora=x.ini<=n&&n<x.fin,abierto=mdMenu===x.k;
+     const dentro=todo.filter(t=>fijoDe(t)===x),subs=subHuecos(x,dentro),libre=subs.reduce((s,g)=>s+g.fin-g.ini,0);
      tl+=`<div class="mdfj ${ahora?'encurso':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="fijoDrop(event,'${x.k}')">`+
-       `<div class="mdfjh"><b>${esc(x.t)}</b><span class="mdhoyno" title="Hoy no hay: libera ese tiempo" onclick="fijoHoyNo('${x.k}')">hoy no</span>`+
-       `<span class="mdfjm">${fmtHora(x.ini)} – ${fmtHora(x.fin)}${dentro.length?` · ${fmtDur(ocup)} ocupada de ${fmtDur(x.fin-x.ini)}`:''}</span></div>`+
-       `<div class="mdfjrow"><span class="mdtm">${fmtHora(x.ini)}</span><span class="mdpill fijo" style="height:${H}px"></span>`+
-       `<div class="mdcarril" style="height:${H}px">${dentro.map(t=>filaCarril(t,x,n)).join('')}</div></div>`+
-       `<div class="mdfjpie">${caja}</div></div>`;return;}
-   if(f.tipo==='it'){tl+=filaTarea(f.x,n,false);}
-   else{const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
-     tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
-       `<span class="mdline"></span><span class="mdgt" onclick="mdHueco=${abierto?'null':f.i};renderMiDia()">hueco ${fmtHora(g.ini)} – ${fmtHora(g.fin)} · ${fmtDur(cabe)} <b>${abierto?'cerrar':'＋ llenar'}</b></span></div>`;
-     if(abierto){const cands=[].concat(...band.map(x=>x.it)).filter(c=>(c.d||SIN_DUR)<=cabe);
-       tl+=`<div class="mdsug"><div class="mdsugh">Cabe en ${fmtDur(cabe)}</div>`+
-         (cands.length?cands.slice(0,8).map(c=>`<div class="mdcand" onclick="colocar('${c.k}',${g.ini})"><span class="gdot" style="background:${c.c.sol}"></span><span class="mdt">${esc(c.t)}</span><span class="du">${c.d?fmtDur(c.d):'30 min?'}</span></div>`).join('')
-          :`<div class="lcempty">Nada de la bandeja cabe aquí. Puedes dejarlo libre.</div>`)+`</div>`;}}});
+       `<span class="mdtm">${fmtHora(x.ini)}</span><div class="mdfjb" onclick="mdMenuTog('${x.k}')" title="Meter algo aquí o quitarlo por hoy">`+
+       `<b>${esc(x.t)}</b><span>hasta ${fmtHora(x.fin)}</span><span class="mdmas">⋯</span></div></div>`;
+     if(abierto)tl+=`<div class="mdsug"><div class="mdsugh">Libre dentro de ${esc(x.t)}: ${fmtDur(libre)||'nada'}</div>`+
+       cand(todas.filter(c=>subs.some(g=>(c.d||SIN_DUR)<=g.fin-g.ini)),0,c=>`meterEnFijo('${c.k}','${x.k}')`)+
+       `<div class="mdnoh" onclick="mdMenu=null;fijoHoyNo('${x.k}')">Hoy no hay ${esc(x.t)} (libera ese tiempo)</div></div>`;
+     return;}
+   if(f.tipo==='it'){tl+=filaTarea(f.x,n,f.dentro);return;}
+   const g=f.g;const abierto=mdHueco===f.i;const cabe=g.fin-g.ini;
+   tl+=`<div class="mdgap ${abierto?'on':''}" ondragover="gapOver(event)" ondragleave="gapLeave(event)" ondrop="gapDrop(event,${g.ini})">`+
+     `<span class="mdtm">${fmtHora(g.ini)}</span><div class="mdgb" onclick="mdHueco=${abierto?'null':f.i};renderMiDia()">libre ${fmtDur(cabe)}<b>${abierto?'cerrar':'＋ llenar'}</b></div></div>`;
+   if(abierto)tl+=`<div class="mdsug"><div class="mdsugh">Cabe en ${fmtDur(cabe)}</div>`+cand(todas.filter(c=>(c.d||SIN_DUR)<=cabe),cabe,c=>`colocar('${c.k}',${g.ini})`)+`</div>`;});
  if(!filas.length)tl=`<div class="lcempty">Tu día está vacío. Toca algo de «Por acomodar» y se pone en el primer hueco.</div>`;
  /* bandeja */
  let bd=band.map(g=>`<div class="mdgrp">${g.n}</div>`+g.it.map(c=>
@@ -1713,8 +1680,9 @@ function renderMiDia(){
  box.innerHTML=
   `<div class="pnl"><div class="mdhead"><span class="ph" style="background:var(--accbg);color:var(--acctx)">Mi día</span>`+
   `<span class="mdh">de <select onchange="setHorario('ini',this.value)">${hOpts(diaIni())}</select> a <select onchange="setHorario('fin',this.value)">${hOpts(diaFin())}</select></span></div>`+
-  `<div class="mdmeter"><span>${fijo?'Fijo '+fmtDur(fijo)+' · ':''}tareas ${fmtDur(planeado)||'0 min'} · de ${fmtDur(disp)}</span>${pct>100?`<span style="color:var(--dantx)">no cabe: quita algo</span>`:''}</div>`+
-  `<div class="ahbar"><i style="width:${Math.min(100,pct)}%;background:${tono}"></i></div></div>`+
+  `<div class="mdmeter"><span>${fijo?`<i class="sw" style="background:var(--line2)"></i>fijo ${fmtDur(fijo)} · `:''}<i class="sw" style="background:${tono}"></i>tareas ${fmtDur(planeado)||'0 min'} · `+
+  `${pct>100?`<b style="color:var(--dantx);font-weight:600">no cabe: quita algo</b>`:`libre ${fmtDur(Math.max(0,disp-fijo-planeado))||'0 min'}`}</span></div>`+
+  `<div class="ahbar" style="display:flex">${fijo?`<i style="width:${Math.min(100,fijo/disp*100)}%;background:var(--line2)"></i>`:''}<i style="width:${Math.max(0,Math.min(100-fijo/disp*100,planeado/disp*100))}%;background:${tono}"></i></div></div>`+
   `<div class="mdcols"><div class="pnl mdtl">${tl}</div>`+
   `<div class="pnl"><div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--soft);color:var(--mut)">Por acomodar</span></div>`+
   `<div class="lcempty" style="margin:-2px 0 6px">Toca una para ponerla en el primer hueco donde quepa${matchMedia('(pointer:fine)').matches?', o arrástrala a un hueco':''}.</div>`+
