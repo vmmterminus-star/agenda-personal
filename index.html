@@ -68,6 +68,9 @@ h1{font-size:21px;font-weight:600;margin:0 0 1px}
 .tdh{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line2)}
 .tdh i{width:8px;height:8px;border-radius:2px;flex:none}
 .tdh span{margin-left:auto;font-weight:400;color:var(--hint);letter-spacing:0}
+.tdh{cursor:pointer;user-select:none}
+.tdh b{font-weight:400;color:var(--hint);width:10px;text-align:center}
+.tdb.cerrado{margin-bottom:6px}
 .tdg{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--hint);margin:6px 0 1px}
 .tdrow{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.35}
 .tdck{width:12px;height:12px;border:1.5px solid var(--line2);border-radius:4px;flex:none;cursor:pointer}
@@ -1883,6 +1886,9 @@ function renderRepaso(){const box=document.getElementById('repasoBox');if(!box)r
 function cuandoCorto(d){const n=dayDiff(d);if(n<0)return 'venció';if(n===0)return 'hoy';if(n===1)return 'mañana';
  const p=d.split('-').map(Number);const dt=new Date(p[0],p[1]-1,p[2]);
  return n<7?dt.toLocaleDateString('es-MX',{weekday:'short'}).split('.').join(''):dt.toLocaleDateString('es-MX',{day:'numeric',month:'short'}).split('.').join('');}
+/* encabezado de cada bloque: se abre o se cierra con un toque y se queda como lo dejaste (panels, llave td:<bloque>) */
+function tdCab(k,sol,nom,n){const ab=panelAbierto('td:'+k);
+ return `<div class="tdb${ab?'':' cerrado'}"><div class="tdh" onclick="togglePanel('td:${k}')"><i style="background:${sol}"></i>${esc(nom)}<span>${n}</span><b>${ab?'▾':'▸'}</b></div>`;}
 function renderTodos(){const box=document.getElementById('todosBox');if(!box)return;
  const fila=(t,ck,tx,d,clic)=>`<div class="tdrow"><span class="tdck" title="Hecha" onclick="${ck}"></span><span class="tdt" onclick="${clic}">${esc(tx)}</span><span class="tdd">${d?esc(cuandoCorto(d)):''}</span></div>`;
  const grupos=(lista)=>{const pronto=lista.filter(x=>x.d&&dayDiff(x.d)<=7).sort((a,b)=>a.d.localeCompare(b.d)),luego=lista.filter(x=>!(x.d&&dayDiff(x.d)<=7));
@@ -1892,12 +1898,12 @@ function renderTodos(){const box=document.getElementById('todosBox');if(!box)ret
  areas().forEach(a=>{if(hiddenB[a.key])return;const ord=areaOrder[a.key]||[];
    const ts=TK().filter(t=>areaOf(t)===a.key&&activo(t)).sort((x,y)=>{let i=ord.indexOf(x.id),j=ord.indexOf(y.id);if(i<0)i=999;if(j<0)j=999;return i-j;});
    if(!ts.length)return;total+=ts.length;const c=colOf(a);
-   html+=`<div class="tdb"><div class="tdh"><i style="background:${c.sol}"></i>${esc(a.name)}<span>${ts.length}</span></div>`+
-     grupos(ts.map(t=>({d:dateOf(t)||null,h:fila(t,`toggle('${t.id}')`,txtOf(t),dateOf(t),`openDetail(event,'${t.id}')`)})))+`</div>`;});
+   html+=tdCab(a.key,c.sol,a.name,ts.length)+
+     (panelAbierto('td:'+a.key)?grupos(ts.map(t=>({d:dateOf(t)||null,h:fila(t,`toggle('${t.id}')`,txtOf(t),dateOf(t),`openDetail(event,'${t.id}')`)}))):'')+`</div>`;});
  const es=escTareas();
  if(es.length){total+=es.length;
-   html+=`<div class="tdb"><div class="tdh"><i style="background:${ESC_COL.sol}"></i>Agenda escolar<span>${es.length}</span></div>`+
-     grupos(es.map(t=>({d:t.f||null,h:fila(t,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)})))+`</div>`;}
+   html+=tdCab('__esc',ESC_COL.sol,'Agenda escolar',es.length)+
+     (panelAbierto('td:__esc')?grupos(es.map(t=>({d:t.f||null,h:fila(t,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)}))):'')+`</div>`;}
  const abierto=panelAbierto('todos');
  box.innerHTML=total?`<div class="pnlh" onclick="togglePanel('todos')"><span class="ph" style="background:var(--soft);color:var(--mut)">Todos tus bloques</span><span class="n">${total}</span><span class="ar">${abierto?'▾':'▸'}</span></div>`+(abierto?`<div class="tdcols">${html}</div>`:''):'';
  box.style.display=total?'':'none';}
