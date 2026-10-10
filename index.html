@@ -52,6 +52,28 @@ h1{font-size:21px;font-weight:600;margin:0 0 1px}
 .pnlh{display:flex;align-items:center;gap:7px;margin-bottom:8px;cursor:pointer;flex-wrap:wrap}
 .pnlh .n{font-size:10px;color:var(--hint)}
 .pnlh .ar{font-size:10px;color:var(--acc);margin-left:auto}
+.rpbox{border-color:var(--acc)}
+.rph{display:flex;align-items:center;gap:7px;font-size:13px}
+.rph b{font-weight:600}
+.rph>span:not(.gdot){font-size:11px;color:var(--mut)}
+.rph .mini{margin-left:auto}
+.rpsub{font-size:11px;color:var(--mut);margin:3px 0 6px}
+.rprow{display:flex;align-items:center;gap:5px;border-top:1px solid var(--line);padding:5px 0;flex-wrap:wrap}
+.rpt{flex:1;min-width:140px;font-size:12.5px;cursor:pointer}
+.rpb{font-size:10.5px;font-weight:500;color:var(--mut);border:1px solid var(--line2);border-radius:7px;padding:2px 7px;cursor:pointer;white-space:nowrap}
+.rpb:hover{background:var(--soft)}
+.rpx{color:var(--hint)}
+.tdcols{columns:3 230px;column-gap:18px}
+.tdb{break-inside:avoid;margin-bottom:12px}
+.tdh{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line2)}
+.tdh i{width:8px;height:8px;border-radius:2px;flex:none}
+.tdh span{margin-left:auto;font-weight:400;color:var(--hint);letter-spacing:0}
+.tdg{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--hint);margin:6px 0 1px}
+.tdrow{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.35}
+.tdck{width:12px;height:12px;border:1.5px solid var(--line2);border-radius:4px;flex:none;cursor:pointer}
+.tdck:hover{border-color:var(--acc)}
+.tdt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.tdd{flex:none;font-size:10.5px;color:var(--mut)}
 .secH{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
  padding:3px 10px;border-radius:11px;display:inline-block;margin:0 0 7px}
 .add{font-size:12px;color:var(--mut);border:1px dashed var(--line2);border-radius:10px;
@@ -236,8 +258,8 @@ input.add::placeholder{color:var(--mut)}
 .nmeta{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap}
 .anm{font-size:10.5px;font-weight:500}
 .big{font-size:15px;font-weight:600;white-space:nowrap}
-.vencido{font-size:9.5px;padding:2px 8px;border-radius:9px;background:var(--danbg);color:var(--dantx);font-weight:600;white-space:nowrap}
-.nc.over{background:#F8E3DE;border-color:#EEC9BC}
+.vencido{font-size:9.5px;padding:2px 8px;border-radius:9px;background:var(--soft);color:var(--txt);font-weight:600;white-space:nowrap}
+.nc.over{}
 .nowempty{font-size:12.5px;color:var(--grntx);background:var(--grnbg);border-radius:11px;padding:16px 14px;text-align:center;line-height:1.6}
 .nowempty small{display:block;font-size:11px;opacity:.78;margin-top:4px}
 .bar{height:7px;background:#EFEAE2;border-radius:4px;overflow:hidden}
@@ -346,9 +368,6 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 .sb{display:flex;gap:5px;align-items:center;margin-top:3px;flex-wrap:wrap}
 .dt{font-size:10px;color:var(--mut);white-space:nowrap;text-align:right;line-height:1.2}
 .dt b{font-weight:600}
-.u1{background:#F8E3DE;border-radius:0 9px 9px 0;border-bottom-color:transparent}
-.u2{background:#F7E7DE;border-radius:0 9px 9px 0;border-bottom-color:transparent}
-.u3{background:#F3EDDF;border-radius:0 9px 9px 0;border-bottom-color:transparent}
 .up{width:25px;height:25px;border-radius:50%;border:1px solid var(--line2);background:#fff;
  color:var(--acc);font-size:12px;line-height:1;flex:none;cursor:pointer;padding:0}
 .up.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -527,7 +546,9 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
     <div id="nowView">
       <div id="cdBox"></div>
       <div id="daysBox"></div>
+      <div id="repasoBox"></div>
       <div id="energyBox"></div>
+      <div class="pnl" id="todosBox"></div>
       <div id="streakBox"></div>
     </div>
 
@@ -717,6 +738,7 @@ const BOKEY="agenda_blockorder_v1";   /* orden de los bloques (se sincroniza) */
 const TGKEY="agenda_tags_v1",TGOKEY="agenda_tagov_v1";
 const DMKEY="agenda_durmin_v1";   /* duración exacta en minutos, por tarea (si la escribiste) */
 const ESCKEY="agenda_esccode_v1",EHKEY="agenda_eschora_v1";   /* código de la agenda escolar · horas de Mi día para tareas escolares */
+const RPSKEY="agenda_repaso_v1";   /* repaso: qué tarea revisaste y cuándo, y el bloque que te toca hoy */
 const MDKEY="agenda_midia_v1";   /* mi día: horario, fecha y hora previas de lo que acomodaste, lo elegido de los bloques */
 /* paleta cerrada de 8. El gris (índice 7) queda apartado para "sin etiqueta". */
 const TGPAL=[{k:'mor',n:'Morado',bg:'#EEEDFE',tx:'#3C3489'},
@@ -753,6 +775,7 @@ let tags=localStorage.getItem(TGKEY)?J(TGKEY,"[]"):TGSEED.map(t=>Object.assign({
 let tagOv=J(TGOKEY,"{}");
 let durMin=J(DMKEY,"{}");
 let midia=J(MDKEY,"{}");
+let repaso=J(RPSKEY,"{}");
 let escCode=J(ESCKEY,"\"\""),escHora=J(EHKEY,"{}");
 /* desde cuándo está cada cosa en «importa ahorita» (para el aviso de los 3 días). Las viejas cuentan desde hoy. */
 short.forEach(e=>{if(!e.at)e.at=todayStr();});
@@ -769,7 +792,7 @@ function save(){
  S(AOVKEY,areaOv);S(SYKEY,synced);S(SMKEY,syncMem);S(CSGKEY,customSg);S(HBKEY,hiddenB);S(DSGKEY,deletedSg);
  S(RMKEY2,rmind);S(DTKEY2,dtypeOv);S(ADKEY,areaDesc);S(SDKEY,sgDesc);S(BMKEY,blockMode);
  S(SHKEY,short);S(PNKEY,panels);S(DSCKEY,desc);S(FOKEY,foco);S(STKEY,stepMode);S(BOKEY,blockOrder);
- S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);S(MDKEY,midia);S(ESCKEY,escCode);S(EHKEY,escHora);
+ S(TGKEY,tags);S(TGOKEY,tagOv);S(DMKEY,durMin);S(MDKEY,midia);S(RPSKEY,repaso);S(ESCKEY,escCode);S(EHKEY,escHora);
  dirty=true;cambios++;schedulePush();
 }
 
@@ -1813,7 +1836,7 @@ function fichaHTML(tk){
  const hecho=!!state[tk.id];const ov=overdue(tk);
  let venc="";
  if(ov)venc=`<span class="vencido">venció hace ${-n} día${-n>1?'s':''}</span>`;
- else if(n!==null&&n<=3)venc=`<span class="tipo" style="background:var(--ambbg);color:var(--ambtx)">${n===0?'vence hoy':n===1?'vence mañana':'vence en '+n+' días'}</span>`;
+ else if(n!==null&&n<=3)venc=`<span class="tipo" style="background:var(--soft);color:var(--mut)">${n===0?'vence hoy':n===1?'vence mañana':'vence en '+n+' días'}</span>`;
  const rep=repOf(tk);const repl=rep?`<span class="tipo" style="background:var(--grnbg);color:var(--grntx)">${repLabel(rep)}</span>`:"";
  const del=delegSt[tk.id]?`<span class="tipo" style="background:var(--blubg);color:var(--blutx)">delegada</span>`:"";
  const st=subs[tk.id]||[];const pasos=st.length?`<span class="tim">· ${st.filter(s=>s.done).length} de ${st.length} pasos</span>`:"";
@@ -1824,6 +1847,59 @@ function fichaHTML(tk){
    `<div class="nmeta"><span class="anm" style="color:${c.tx}">${esc(a.name)}</span>${venc}${repl}${del}${pasos}</div></div>`+
    (dur?`<span class="big" style="color:${dur.c}">${dur.t}</span>`:`<span class="tim">sin estimar</span>`)+`</div>`;
 }
+/* =======================================================================
+   REPASO Y TODOS TUS BLOQUES — para que lo que no está en «importa» no se pierda
+   ======================================================================= */
+/* repaso de un bloque al día: las olvidadas (sin fecha cercana, fuera de la lista corta, sin revisar en 14 días) */
+function repasoVisto(id){const f=(repaso.vis||{})[id];return !!(f&&dayDiff(f)>-14);}
+function repasoCands(key){return TK().filter(t=>areaOf(t)===key&&activo(t)&&!enCorta(t.id)&&!repOf(t)&&!repasoVisto(t.id)&&(!dateOf(t)||dayDiff(dateOf(t))>7));}
+function repasoBloque(){const hoy=todayStr();
+ if(repaso.hoy&&repaso.hoy.f===hoy)return repaso.hoy;
+ /* le toca al bloque con más olvidadas; se queda fijo todo el día */
+ let mejor=null,max=0;areas().forEach(a=>{if(hiddenB[a.key])return;const n=repasoCands(a.key).length;if(n>max){max=n;mejor=a.key;}});
+ const v=repaso.vis||{};Object.keys(v).forEach(id=>{if(dayDiff(v[id])<-60)delete v[id];});
+ repaso.hoy={f:hoy,b:mejor,listo:false};return repaso.hoy;}
+function repasoMarca(id){if(!repaso.vis)repaso.vis={};repaso.vis[id]=todayStr();}
+function repasoAccion(ev,id,q){if(ev)ev.stopPropagation();repasoMarca(id);
+ if(q==='sube'){toggleCorta(null,id);return;}
+ if(q==='fecha'){save();render();openDetail(null,id);return;}
+ if(q==='arch'){archIt(null,id);return;}
+ save();render();}
+function repasoListo(){const r=repaso.hoy;if(!r)return;repasoCands(r.b).forEach(t=>repasoMarca(t.id));r.listo=true;save();render();}
+function renderRepaso(){const box=document.getElementById('repasoBox');if(!box)return;
+ const r=repasoBloque();const a=r&&r.b?areaByKey(r.b):null;const ts=a?repasoCands(a.key):[];
+ if(!a||r.listo||!ts.length){box.innerHTML='';return;}
+ const c=colOf(a);
+ box.innerHTML=`<div class="pnl rpbox"><div class="rph"><span class="gdot" style="background:${c.sol}"></span><b>Repaso · ${esc(a.name)}</b><span>${ts.length} olvidada${ts.length>1?'s':''}</span>`+
+  `<button class="mini" onclick="repasoListo()">listo ✓</button></div>`+
+  `<div class="rpsub">Lo que no has visto en un rato. Súbelo a importa, ponle fecha, déjalo o archívalo.</div>`+
+  ts.slice(0,8).map(t=>`<div class="rprow"><span class="rpt" onclick="openDetail(event,'${t.id}')">${esc(txtOf(t))}</span>`+
+   `<span class="rpb" title="Subir a lo que importa ahorita" onclick="repasoAccion(event,'${t.id}','sube')">↑ importa</span>`+
+   `<span class="rpb" title="Ponerle fecha" onclick="repasoAccion(event,'${t.id}','fecha')">fecha</span>`+
+   `<span class="rpb" title="Dejarla así (no vuelve a salir en 14 días)" onclick="repasoAccion(event,'${t.id}','deja')">dejar</span>`+
+   `<span class="rpb rpx" title="Al cajón" onclick="repasoAccion(event,'${t.id}','arch')">archivar</span></div>`).join('')+
+  (ts.length>8?`<div class="rpsub" style="margin-top:6px">y ${ts.length-8} más, conforme vayas despejando.</div>`:'')+`</div>`;}
+/* todos tus bloques en renglones cortos, como el widget: lo de esta semana arriba y lo demás abajo */
+function cuandoCorto(d){const n=dayDiff(d);if(n<0)return 'venció';if(n===0)return 'hoy';if(n===1)return 'mañana';
+ const p=d.split('-').map(Number);const dt=new Date(p[0],p[1]-1,p[2]);
+ return n<7?dt.toLocaleDateString('es-MX',{weekday:'short'}).split('.').join(''):dt.toLocaleDateString('es-MX',{day:'numeric',month:'short'}).split('.').join('');}
+function renderTodos(){const box=document.getElementById('todosBox');if(!box)return;
+ const fila=(t,ck,tx,d,clic)=>`<div class="tdrow"><span class="tdck" title="Hecha" onclick="${ck}"></span><span class="tdt" onclick="${clic}">${esc(tx)}</span><span class="tdd">${d?esc(cuandoCorto(d)):''}</span></div>`;
+ const grupos=(lista)=>{const pronto=lista.filter(x=>x.d&&dayDiff(x.d)<=7).sort((a,b)=>a.d.localeCompare(b.d)),luego=lista.filter(x=>!(x.d&&dayDiff(x.d)<=7));
+   let h='';if(pronto.length&&luego.length)h+=`<div class="tdg">Venció o esta semana</div>`;h+=pronto.map(x=>x.h).join('');
+   if(pronto.length&&luego.length)h+=`<div class="tdg">Después o sin fecha</div>`;return h+luego.map(x=>x.h).join('');};
+ let html='',total=0;
+ areas().forEach(a=>{if(hiddenB[a.key])return;const ord=areaOrder[a.key]||[];
+   const ts=TK().filter(t=>areaOf(t)===a.key&&activo(t)).sort((x,y)=>{let i=ord.indexOf(x.id),j=ord.indexOf(y.id);if(i<0)i=999;if(j<0)j=999;return i-j;});
+   if(!ts.length)return;total+=ts.length;const c=colOf(a);
+   html+=`<div class="tdb"><div class="tdh"><i style="background:${c.sol}"></i>${esc(a.name)}<span>${ts.length}</span></div>`+
+     grupos(ts.map(t=>({d:dateOf(t)||null,h:fila(t,`toggle('${t.id}')`,txtOf(t),dateOf(t),`openDetail(event,'${t.id}')`)})))+`</div>`;});
+ const es=escTareas();
+ if(es.length){total+=es.length;
+   html+=`<div class="tdb"><div class="tdh"><i style="background:${ESC_COL.sol}"></i>Agenda escolar<span>${es.length}</span></div>`+
+     grupos(es.map(t=>({d:t.f||null,h:fila(t,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)})))+`</div>`;}
+ box.innerHTML=total?`<div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--soft);color:var(--mut)">Todos tus bloques · ${total}</span></div><div class="tdcols">${html}</div>`:'';
+ box.style.display=total?'':'none';}
 function renderEnergy(){
  const box=document.getElementById('energyBox');
  const enLista=id=>enCorta(id);
@@ -1837,7 +1913,7 @@ function renderEnergy(){
  const escAtr=esc.filter(t=>dayDiff(t.f)<0).sort((a,b)=>a.f.localeCompare(b.f)),escPronto=esc.filter(t=>dayDiff(t.f)>=0);
  let html="";
  if(atras.length||escAtr.length){const na=atras.length+escAtr.length;
-   html+=`<div class="secH" style="background:var(--danbg);color:var(--dantx)">Atrasada${na>1?'s':''} · ${na}</div>`;
+   html+=`<div class="secH" style="background:var(--soft);color:var(--txt)">Atrasada${na>1?'s':''} · ${na}</div>`;
    atras.sort((a,b)=>dayDiff(dateOf(a))-dayDiff(dateOf(b))).forEach(tk=>html+=fichaHTML(tk));
    escAtr.forEach(t=>html+=escFicha(t));
  }
@@ -1906,8 +1982,8 @@ function renglonHTML(tk,o){
  const sub=(durl||repl||del||pasos)?`<span class="sb">${durl}${repl}${del}${pasos}</span>`:"";
  let der="";
  if(n!==null&&!hecho){
-   if(n<0)der=`<span class="dt" style="color:var(--dantx)"><b>venció</b><br><span style="font-size:9.5px;opacity:.75">hace ${-n} d</span></span>`;
-   else if(n<=3)der=`<span class="dt" style="color:${n<=1?'var(--dantx)':n===2?'var(--acctx)':'var(--ambtx)'}"><b>${n===0?'hoy':n===1?'mañana':n+' días'}</b></span>`;
+   if(n<0)der=`<span class="dt"><b>venció</b><br><span style="font-size:9.5px;opacity:.75">hace ${-n} d</span></span>`;
+   else if(n<=3)der=`<span class="dt"><b>${n===0?'hoy':n===1?'mañana':n+' días'}</b></span>`;
    else der=`<span class="dt">${dLabel(d)}</span>`;
  }
  const borrar=tk.id.includes('|c|')?`<span class="rx" onclick="delTask(event,'${tk.id}')">✕</span>`:"";
@@ -2566,7 +2642,7 @@ function setMode(m){viewMode=m;
  document.body.classList.toggle('modo-now',m==='now');
  localStorage.setItem(VMKEY,m);render();   // la vista es de cada dispositivo: no se sube a la nube
  window.scrollTo(0,0);}
-function renderNow(){if(viewMode!=='now')return;renderCd();renderDays();renderEnergy();renderStreak();}
+function renderNow(){if(viewMode!=="now")return;renderCd();renderDays();renderRepaso();renderEnergy();renderTodos();renderStreak();}
 function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
 function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();renderMiDia();}
 
