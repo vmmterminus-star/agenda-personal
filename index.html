@@ -268,8 +268,8 @@ input.add::placeholder{color:var(--mut)}
 /* ---------- página: contenido a la izquierda, paneles de consulta a la derecha ---------- */
 #page{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px;align-items:start}
 #colA,#sideCol{min-width:0}
-body.modo-now #page{display:block;max-width:780px}
-body.modo-now #sideCol{display:none}
+body.modo-now #page{max-width:1250px}
+body.modo-now #sideCol>*:not(#todosBox){display:none!important}
 /* pestaña Mi día: solo el armado del día (y la tarjeta Ahora) */
 body.modo-dia #page{display:block;max-width:1100px}
 body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-dia #diaBox{display:none!important}
@@ -548,7 +548,6 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
       <div id="daysBox"></div>
       <div id="repasoBox"></div>
       <div id="energyBox"></div>
-      <div class="pnl" id="todosBox"></div>
       <div id="streakBox"></div>
     </div>
 
@@ -563,6 +562,7 @@ body.modo-dia #sideCol,body.modo-dia #shortBox,body.modo-dia #focoBox,body.modo-
 
   <div id="sideCol">
     <div class="pnl" id="dateBox"></div>
+    <div class="pnl" id="todosBox"></div>
     <div class="pnl" id="recBox"></div>
     <div class="pnl" id="blkBox"></div>
     <div class="pnl" id="delegBox"></div>
@@ -1898,7 +1898,8 @@ function renderTodos(){const box=document.getElementById('todosBox');if(!box)ret
  if(es.length){total+=es.length;
    html+=`<div class="tdb"><div class="tdh"><i style="background:${ESC_COL.sol}"></i>Agenda escolar<span>${es.length}</span></div>`+
      grupos(es.map(t=>({d:t.f||null,h:fila(t,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)})))+`</div>`;}
- box.innerHTML=total?`<div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--soft);color:var(--mut)">Todos tus bloques · ${total}</span></div><div class="tdcols">${html}</div>`:'';
+ const abierto=panelAbierto('todos');
+ box.innerHTML=total?`<div class="pnlh" onclick="togglePanel('todos')"><span class="ph" style="background:var(--soft);color:var(--mut)">Todos tus bloques</span><span class="n">${total}</span><span class="ar">${abierto?'▾':'▸'}</span></div>`+(abierto?`<div class="tdcols">${html}</div>`:''):'';
  box.style.display=total?'':'none';}
 function renderEnergy(){
  const box=document.getElementById('energyBox');
@@ -2643,7 +2644,7 @@ function setMode(m){viewMode=m;
  localStorage.setItem(VMKEY,m);render();   // la vista es de cada dispositivo: no se sube a la nube
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=="now")return;renderCd();renderDays();renderRepaso();renderEnergy();renderTodos();renderStreak();}
-function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderRec();renderSideBlk();renderDeleg();renderArch();}
+function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderDateBox();renderTodos();renderRec();renderSideBlk();renderDeleg();renderArch();}
 function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();renderMiDia();}
 
 /* arranque */
