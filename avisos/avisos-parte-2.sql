@@ -9,8 +9,10 @@
 -- Revisa cada minuto, en hora de la Ciudad de México.
 -- ═══════════════════════════════════════════════════════════════
 
--- manda un aviso a Pushover, solo si esa misma "clave" no se mandó antes
-create or replace function avisos_agenda.mandar(p_clave text, p_titulo text, p_msg text, p_prioridad int default 0)
+-- manda un aviso a Pushover, solo si esa misma "clave" no se mandó antes.
+-- p_tarea (opcional): el aviso abre la agenda directo en esa tarea
+drop function if exists avisos_agenda.mandar(text, text, text, int);
+create or replace function avisos_agenda.mandar(p_clave text, p_titulo text, p_msg text, p_prioridad int default 0, p_tarea text default null)
 returns boolean language plpgsql as $$
 declare
   cfg avisos_agenda.config;
@@ -24,7 +26,8 @@ begin
       'token', cfg.token, 'user', cfg.usuario,
       'title', left(p_titulo, 250), 'message', left(p_msg, 1000),
       'priority', p_prioridad,
-      'url', 'https://vmmterminus-star.github.io/agenda-personal/', 'url_title', 'Abrir agenda'));
+      'url', 'https://vmmterminus-star.github.io/agenda-personal/' || coalesce('#t=' || replace(p_tarea, '|', '%7C'), ''),
+      'url_title', case when p_tarea is null then 'Abrir agenda' else 'Abrir la tarea' end));
   return true;
 end $$;
 
@@ -101,7 +104,7 @@ begin
         falta := ceil(extract(epoch from ini - ahora) / 60);
         if avisos_agenda.mandar(fila.code || ':antes:' || t.i || ':' || t.f || ':' || t.h,
              'En ' || case when falta >= 55 then '1 h' else falta || ' min' end || ': ' || t.t,
-             'A las ' || avisos_agenda.hora(t.h) || coalesce(' · dura ' || avisos_agenda.dur(t.d), '') || ' · ' || t.b)
+             'A las ' || avisos_agenda.hora(t.h) || coalesce(' · dura ' || avisos_agenda.dur(t.d), '') || ' · ' || t.b, 0, t.i)
         then n := n + 1; end if;
       end if;
       -- empieza (tipo Tiimo)
@@ -109,7 +112,7 @@ begin
         if avisos_agenda.mandar(fila.code || ':empieza:' || t.i || ':' || t.f || ':' || t.h,
              'Empieza: ' || t.t,
              coalesce('Dura ' || avisos_agenda.dur(t.d) || ' · hasta ' || avisos_agenda.hora((ini + make_interval(mins => t.d))::time),
-                      'Sin duración marcada') || ' · ' || t.b, 1)
+                      'Sin duración marcada') || ' · ' || t.b, 1, t.i)
         then n := n + 1; end if;
       end if;
       -- termina
@@ -117,7 +120,7 @@ begin
         fin := ini + make_interval(mins => t.d);
         if ahora >= fin and ahora < fin + interval '10 minutes' then
           if avisos_agenda.mandar(fila.code || ':termina:' || t.i || ':' || t.f || ':' || t.h,
-               'Terminó: ' || t.t, '¿La marcas hecha? Si no, muévela a otra hora.')
+               'Terminó: ' || t.t, '¿La marcas hecha? Si no, muévela a otra hora.', 0, t.i)
           then n := n + 1; end if;
         end if;
       end if;
@@ -156,7 +159,7 @@ begin
       for t in select * from _a a where a.r <> '' and a.f = hoy + 1 loop
         if avisos_agenda.mandar(fila.code || ':rec:' || t.i || ':' || t.f,
              'Mañana: ' || t.t,
-             coalesce(avisos_agenda.hora(t.h) || ' · ', '') || t.r || ' · ' || t.b)
+             coalesce(avisos_agenda.hora(t.h) || ' · ', '') || t.r || ' · ' || t.b, 0, t.i)
         then n := n + 1; end if;
       end loop;
     end if;
