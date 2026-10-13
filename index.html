@@ -63,20 +63,26 @@ h1{font-size:21px;font-weight:600;margin:0 0 1px}
 .rpb{font-size:10.5px;font-weight:500;color:var(--mut);border:1px solid var(--line2);border-radius:7px;padding:2px 7px;cursor:pointer;white-space:nowrap}
 .rpb:hover{background:var(--soft)}
 .rpx{color:var(--hint)}
-.tdcols{columns:3 230px;column-gap:18px}
-.tdb{break-inside:avoid;margin-bottom:12px}
-.tdh{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line2)}
-.tdh i{width:8px;height:8px;border-radius:2px;flex:none}
-.tdh span{margin-left:auto;font-weight:400;color:var(--hint);letter-spacing:0}
-.tdh{cursor:pointer;user-select:none}
-.tdh b{font-weight:400;color:var(--hint);width:10px;text-align:center}
-.tdb.cerrado{margin-bottom:6px}
-.tdg{font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--hint);margin:6px 0 1px}
-.tdrow{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.35}
-.tdck{width:12px;height:12px;border:1.5px solid var(--line2);border-radius:4px;flex:none;cursor:pointer}
+.tdcols{columns:2 250px;column-gap:20px}
+.tdb{break-inside:avoid;margin-bottom:14px;border-left:4px solid var(--line2);padding-left:10px}
+.tdh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:1px 0 4px;cursor:pointer;user-select:none}
+.tdh .tdn{flex:1;min-width:0}
+.tdh span:not(.tdn){font-weight:400;color:var(--hint);font-size:11px}
+.tdh b{font-weight:400;color:var(--hint);width:12px;text-align:center}
+.tdpills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.tdpill{font-family:inherit;font-size:12px;font-weight:500;border:none;border-radius:11px;padding:5px 11px;cursor:pointer}
+.tdpill b{font-weight:400;opacity:.7;margin-left:2px}
+.tdsep{border-top:1px dashed var(--line2);margin:4px 0}
+.tdrow{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12.5px;line-height:1.35}
+.tdck{width:16px;height:16px;border:1.5px solid var(--line2);border-radius:5px;flex:none;cursor:pointer;margin-top:0}
 .tdck:hover{border-color:var(--acc)}
-.tdt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.tdd{flex:none;font-size:10.5px;color:var(--mut)}
+.tdt{flex:1;min-width:0;cursor:pointer;word-break:break-word}
+.tdd{flex:none;font-size:11px;color:var(--hint);cursor:pointer;border:1px dashed transparent;border-radius:6px;padding:0 4px}
+.tdd.cerca{color:var(--txt);font-weight:600}
+.tdd:hover{border-color:var(--line2)}
+.tdd.vac{opacity:0}
+.tdrow:hover .tdd.vac{opacity:1}
+@media(hover:none){.tdd.vac{display:none}}
 .secH{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
  padding:3px 10px;border-radius:11px;display:inline-block;margin:0 0 7px}
 .add{font-size:12px;color:var(--mut);border:1px dashed var(--line2);border-radius:10px;
@@ -526,9 +532,6 @@ body.modo-now .ahora{padding:9px 13px}
 body.modo-now .ahnom{font-size:14.5px}
 body.modo-now .ahnum{font-size:24px}
 @media(min-width:901px){body.modo-now #page{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}body.modo-now #sideCol{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto}}
-.tdd{cursor:pointer;border:1px dashed transparent;border-radius:6px;padding:0 4px}
-.tdd:hover{border-color:var(--line2)}
-.tdd.vac{color:var(--hint);opacity:.75}
 .tdin{width:100%;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:9px;padding:6px 9px;margin:0 0 10px;background:var(--card);color:var(--txt);outline:none}
 .tdin:focus{border-color:var(--acc)}
 .fbtn{flex:none;font-family:inherit;font-size:10.5px;color:var(--mut);background:none;border:1px dashed transparent;border-radius:7px;padding:1px 6px;cursor:pointer;white-space:nowrap}
@@ -2021,36 +2024,39 @@ function renderRepaso(){const box=document.getElementById('repasoBox');if(!box)r
 function cuandoCorto(d){const n=dayDiff(d);if(n<0)return 'venció';if(n===0)return 'hoy';if(n===1)return 'mañana';
  const p=d.split('-').map(Number);const dt=new Date(p[0],p[1]-1,p[2]);
  return n<7?dt.toLocaleDateString('es-MX',{weekday:'short'}).split('.').join(''):dt.toLocaleDateString('es-MX',{day:'numeric',month:'short'}).split('.').join('');}
-/* encabezado de cada bloque: se abre o se cierra con un toque y se queda como lo dejaste (panels, llave td:<bloque>) */
-function tdCab(k,sol,nom,n){const ab=panelAbierto('td:'+k);
- return `<div class="tdb${ab?'':' cerrado'}"><div class="tdh" onclick="togglePanel('td:${k}')"><i style="background:${sol}"></i>${esc(nom)}<span>${n}</span><b>${ab?'▾':'▸'}</b></div>`;}
+/* bloque abierto: franja gruesa de su color a la izquierda; se cierra tocando el nombre (panels, llave td:<bloque>) */
+function tdCab(k,sol,nom,n){
+ return `<div class="tdb" style="border-left-color:${sol}"><div class="tdh" onclick="togglePanel('td:${k}')"><span class="tdn">${esc(nom)}</span><span>${n}</span><b>▾</b></div>`;}
 let tdBusca='';   /* lo que escribiste en el buscador de «Tus bloques» (no se guarda) */
 function tdBuscar(v){tdBusca=v;renderTodos();}
 function renderTodos(){const box=document.getElementById('todosBox');if(!box)return;
  const q=tdBusca.trim().toLowerCase(),pasa=tx=>!q||tx.toLowerCase().indexOf(q)>=0;
- /* la fecha a la derecha (o «＋ fecha») se toca para cambiarla; en el cel también deslizando */
- const fila=(k,ck,tx,d,clic)=>`<div class="tdrow" data-sw="${k}"><span class="tdck" title="Hecha" onclick="${ck}"></span><span class="tdt" onclick="${clic}">${esc(tx)}</span>`+
-   `<span class="tdd ${d?'':'vac'}" data-fm onclick="fechaMenu(event,'${k}')">${d?esc(cuandoCorto(d)):'＋ fecha'}</span></div>`;
+ /* la fecha a la derecha se toca para cambiarla (sin fecha: «＋ fecha» solo al pasar el mouse; en el cel, deslizando) */
+ const fila=(k,ck,tx,d,clic)=>{const cerca=d&&dayDiff(d)<=7;
+   return `<div class="tdrow" data-sw="${k}"><span class="tdck" title="Hecha" onclick="${ck}"></span><span class="tdt" onclick="${clic}">${esc(tx)}</span>`+
+   `<span class="tdd ${d?(cerca?'cerca':''):'vac'}" data-fm onclick="fechaMenu(event,'${k}')">${d?esc(cuandoCorto(d)):'＋ fecha'}</span></div>`;};
+ /* lo de esta semana (o vencido) arriba; una rayita y lo demás */
  const grupos=(lista)=>{const pronto=lista.filter(x=>x.d&&dayDiff(x.d)<=7).sort((a,b)=>a.d.localeCompare(b.d)),luego=lista.filter(x=>!(x.d&&dayDiff(x.d)<=7));
-   let h='';if(pronto.length&&luego.length)h+=`<div class="tdg">Venció o esta semana</div>`;h+=pronto.map(x=>x.h).join('');
-   if(pronto.length&&luego.length)h+=`<div class="tdg">Después o sin fecha</div>`;return h+luego.map(x=>x.h).join('');};
- let html='',total=0;
+   return pronto.map(x=>x.h).join('')+(pronto.length&&luego.length?'<div class="tdsep"></div>':'')+luego.map(x=>x.h).join('');};
+ let html='',pills='',semana=0;
+ const bloque=(k,col,nom,items)=>{semana+=items.filter(x=>x.d&&dayDiff(x.d)<=7).length;
+   if(!q&&!panelAbierto('td:'+k)){pills+=`<button class="tdpill" style="background:${col.bg||'var(--soft)'};color:${col.tx||'var(--txt)'}" onclick="togglePanel('td:${k}')">${esc(nom)} <b>${items.length}</b></button>`;return;}
+   html+=tdCab(k,col.sol,nom,items.length)+grupos(items)+`</div>`;};
  areas().forEach(a=>{if(hiddenB[a.key])return;const ord=areaOrder[a.key]||[];
    const ts=TK().filter(t=>areaOf(t)===a.key&&activo(t)&&pasa(txtOf(t))).sort((x,y)=>{let i=ord.indexOf(x.id),j=ord.indexOf(y.id);if(i<0)i=999;if(j<0)j=999;return i-j;});
-   if(!ts.length)return;total+=ts.length;const c=colOf(a);
-   html+=tdCab(a.key,c.sol,a.name,ts.length)+
-     ((q||panelAbierto('td:'+a.key))?grupos(ts.map(t=>({d:dateOf(t)||null,h:fila(t.id,`toggle('${t.id}')`,txtOf(t),dateOf(t),`openDetail(event,'${t.id}')`)}))):'')+`</div>`;});
+   if(!ts.length)return;
+   bloque(a.key,colOf(a),a.name,ts.map(t=>({d:dateOf(t)||null,h:fila(t.id,`toggle('${t.id}')`,txtOf(t),dateOf(t),`openDetail(event,'${t.id}')`)})));});
  const es=escTareas().filter(t=>pasa(t.t+' '+(t.m||'')));
- if(es.length){total+=es.length;
-   html+=tdCab('__esc',ESC_COL.sol,'Agenda escolar',es.length)+
-     ((q||panelAbierto('td:__esc'))?grupos(es.map(t=>({d:t.f||null,h:fila('esc:'+t.i,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)}))):'')+`</div>`;}
+ if(es.length)bloque('__esc',ESC_COL,'Agenda escolar',es.map(t=>({d:t.f||null,h:fila('esc:'+t.i,`escMarcar('${t.i}',2)`,t.t+(t.m?' · '+t.m:''),t.f,`escHoja('${t.i}')`)})));
  const abierto=panelAbierto('todos');
  /* el buscador se pinta una sola vez para no perder lo que escribes */
  if(!document.getElementById('tdIn')){
    box.innerHTML=`<div class="pnlh" id="tdHead" onclick="togglePanel('todos')"></div><input id="tdIn" class="tdin" placeholder="🔍 buscar en tus tareas" oninput="tdBuscar(this.value)"><div id="tdLista"></div>`;}
- document.getElementById('tdHead').innerHTML=`<span class="ph" style="background:var(--soft);color:var(--mut)">Tus bloques</span><span class="n">${total}</span><span class="ar">${abierto?'▾':'▸'}</span>`;
+ document.getElementById('tdHead').innerHTML=`<span class="ph" style="background:var(--soft);color:var(--mut)">Tus bloques</span><span class="n">${semana?semana+' para esta semana':''}</span><span class="ar">${abierto?'▾':'▸'}</span>`;
  document.getElementById('tdIn').style.display=abierto?'':'none';
- document.getElementById('tdLista').innerHTML=abierto?(html?`<div class="tdcols">${html}</div>`:`<div class="lcempty">${q?'Nada con «'+esc(tdBusca)+'».':'No hay pendientes.'}</div>`):'';}
+ document.getElementById('tdLista').innerHTML=!abierto?'':
+   (pills?`<div class="tdpills">${pills}</div>`:'')+
+   (html?`<div class="tdcols">${html}</div>`:(pills?`<div class="lcempty">Toca un bloque para abrirlo.</div>`:`<div class="lcempty">${q?'Nada con «'+esc(tdBusca)+'».':'No hay pendientes.'}</div>`));}
 function renderEnergy(){
  const box=document.getElementById('energyBox');
  const enLista=id=>enCorta(id);
