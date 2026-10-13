@@ -1,18 +1,13 @@
-// Mi agenda · widget de iPhone (Scriptable) · versión 3
+// Mi agenda · widget de iPhone (Scriptable) · versión 4
 // Se copia desde la app: ⋯ → Widgets del iPhone. Ahí se le pone solo tu código.
 // Solo LEE el resumen que publica la agenda; nunca escribe nada.
 //
 // Parameter del widget (en «Editar widget»):
-//   hoy            lo que importa ahorita, por bloque, pastilla completa
-//   hoy:b          igual, con inicial y la sección antes del texto
-//   hoy:c          igual, en dos columnas
-//   bloque:Casa            un bloque, una columna
-//   bloque2:Casa           un bloque, secciones en dos columnas
+//   hoy                    lo que importa ahorita, por bloque, y abajo cuántas hay en cada bloque
+//   bloque:Casa            un bloque completo
 //   bloques:Casa, Escuela  dos bloques lado a lado
-//   cal            calendario del mes + lista
-//   cal:b          semana + lista
-//   cal:c          solo la lista
-// Vacío = hoy.
+//   cal                    calendario tipo Apple y la lista de lo que viene
+// Vacío = hoy. Tocar una tarea la abre en la agenda; el ＋ abre «nueva tarea».
 
 const CODIGO     = "__CODIGO__";
 const URL_AGENDA = "__URL__";
@@ -104,158 +99,193 @@ function columna(st, ancho) {
   const c = st.addStack(); c.layoutVertically(); c.spacing = 3; if (ancho) c.size = new Size(ancho, 0); return c;
 }
 
-/* el encabezado de todos: cuántas hay en «importa ahorita» */
-function encabezado(w, d, nombre) {
-  const r = fila(w); r.spacing = 6;
-  const p = r.addStack(); p.backgroundColor = K.accbg; p.cornerRadius = 7; p.setPadding(2, 8, 2, 8); p.centerAlignContent(); p.spacing = 5;
-  texto(p, "Importa ahorita", F.m(11), K.acctx);
-  texto(p, d.cortaN != null ? d.cortaN : (d.corta || []).length, F.b(13), K.acctx);
-  if (d.atrasadas) texto(r, d.atrasadas + (d.atrasadas === 1 ? " vencida" : " vencidas"), F.m(10), K.dantx);
-  r.addSpacer();
-  const edad = (Date.now() - new Date(d.ts).getTime()) / 60000;
-  if (edad > 30) texto(r, "hace " + (edad < 90 ? Math.round(edad) + " min" : Math.round(edad / 60) + " h"), F.r(10), K.hint);
-  else texto(r, nombre.toUpperCase(), F.b(10.5), K.hint);
-}
-function tituloBloque(st, n, c, tx, extra) {
-  const r = fila(st);
-  punto(r, c);
-  texto(r, n, F.sb(11.5), col(tx));
-  r.addSpacer(); if (extra) texto(r, extra, F.r(10), K.hint);
-}
-function titSeccion(st, n, bg, tx) {
-  const r = fila(st);
-  pastilla(r, String(n).toUpperCase(), col(bg), col(tx), F.m(9.5), 1); r.addSpacer();
-}
 function linea(st, t, font, color, lineas) { const r = fila(st); const x = texto(r, t, font, color, lineas); r.addSpacer(); return x; }
 function mas(st, n, que) { if (n > 0) linea(st, "+ " + n + " " + (que || "más"), F.r(10), K.hint); }
 
-/* una tarea. modo: "nombre" = pastilla completa, "ini" = solo inicial */
-function tarea(st, x, modo, der) {
-  const r = fila(st);
-  if (modo === "ini" || modo === "ini0") inicial(r, x.g);
-  else if (x.g) pastilla(r, x.g.n, col(x.g.bg), col(x.g.tx), F.m(9.5));
-  if (modo === "ini" && x.s) texto(r, x.s + " ·", F.r(11), K.hint);
-  texto(r, x.t, F.r(11.5), K.txt);
-  r.addSpacer(); if (der) der(r);
+/* ---------- estilo nuevo (v4): franja del color del bloque, fechas cercanas en negritas, sin rojo ---------- */
+const abre = q => URL_AGENDA + q;
+const abreTarea = i => i ? abre("#t=" + encodeURIComponent(i)) : null;
+const cerca = f => f && dias(f) <= 7;
+/* la fecha a la derecha: lo de esta semana (o vencido) en negritas, lo demás en gris */
+function fecha(r, f) { if (!f) return; texto(r, cuando(f), cerca(f) ? F.sb(10) : F.r(10), cerca(f) ? K.txt : K.hint); }
+/* una tarea: al tocarla se abre esa tarea en la agenda */
+function renglon(st, x) {
+  const r = fila(st); const u = abreTarea(x.i); if (u) r.url = u;
+  texto(r, x.t, F.r(11.5), K.txt); r.addSpacer(); fecha(r, x.f); return r;
+}
+/* la rayita entre lo de esta semana y lo demás */
+function rayita(st) { st.addSpacer(2); const l = st.addStack(); l.size = new Size(0, 1); l.backgroundColor = K.linea; l.addSpacer(); st.addSpacer(2); }
+const H_RAYA = 5;
+/* un bloque: franja de su color a la izquierda, del alto de lo que trae */
+function conFranja(st, c, alto, ancho) {
+  const r = st.addStack(); r.layoutHorizontally(); r.topAlignContent(); r.spacing = 7;
+  const fr = r.addStack(); fr.size = new Size(3, Math.max(8, alto)); fr.cornerRadius = 1.5; fr.backgroundColor = col(c);
+  const cuerpo = r.addStack(); cuerpo.layoutVertically(); cuerpo.spacing = 3; if (ancho) cuerpo.size = new Size(ancho - 10, 0);
+  return cuerpo;
+}
+/* el renglón de arriba: título, un dato y el ＋ para apuntar algo nuevo */
+function cabeza(w, titulo, colorTit, dato, d) {
+  const r = fila(w); r.spacing = 6;
+  texto(r, titulo, F.b(13.5), colorTit || K.txt);
+  if (dato) texto(r, dato, F.r(10.5), K.hint);
+  r.addSpacer();
+  const edad = d && d.ts ? (Date.now() - new Date(d.ts).getTime()) / 60000 : 0;
+  if (edad > 30) texto(r, "hace " + (edad < 90 ? Math.round(edad) + " min" : Math.round(edad / 60) + " h"), F.r(9.5), K.hint);
+  const p = r.addStack(); p.size = new Size(20, 20); p.cornerRadius = 10; p.backgroundColor = K.acc; p.centerAlignContent(); p.url = abre("#nueva");
+  texto(p, "＋", F.b(12), new Color("#FFFFFF"));
+  w.addSpacer(4);
+}
+/* lo de esta semana primero (por fecha) y luego lo demás, en tu orden */
+function partir(ts) {
+  const pronto = ts.filter(x => cerca(x.f)).sort((a, b) => a.f < b.f ? -1 : a.f > b.f ? 1 : 0);
+  return [pronto, ts.filter(x => !cerca(x.f))];
 }
 
-/* ---------- 1 · lo que importa ahorita, por bloque ---------- */
+/* ---------- 1 · Hoy: lo que importa ahorita, por bloque, y abajo cuántas hay en cada bloque ---------- */
 function grupos(d) {
   const orden = (d.colores || []).map(c => c.k), porK = {};
   (d.corta || []).forEach(x => { const k = x.k || "_"; (porK[k] = porK[k] || []).push(x); });
-  const ks = Object.keys(porK).sort((a, b) => {
-    const ia = a === "_" ? 999 : orden.indexOf(a), ib = b === "_" ? 999 : orden.indexOf(b); return ia - ib; });
-  return ks.map(k => {
+  return Object.keys(porK).sort((a, b) => (a === "_" ? 999 : orden.indexOf(a)) - (b === "_" ? 999 : orden.indexOf(b))).map(k => {
     const c = (d.colores || []).find(x => x.k === k) || { n: "Pendientes sueltos", c: "#A79E92", tx: "#7A7267" };
     return { k, n: k === "_" ? "Pendientes sueltos" : c.n, c: c.c, tx: c.tx, it: porK[k] };
   });
 }
-function pintaGrupos(st, gs, alto, modo) {
-  let usado = 0, fuera = 0;
-  gs.forEach(g => {
-    if (usado + H.bloque + H.fila > alto) { fuera += g.it.length; return; }
-    tituloBloque(st, g.n, g.c, g.tx); usado += H.bloque;
-    g.it.forEach(x => {
-      if (usado + H.fila > alto - H.mas) { fuera++; return; }
-      if (modo === "c") {
-        tarea(st, x, "ini0"); usado += H.fila;
-        if (x.s && usado + 13 <= alto - H.mas) { const r = fila(st); r.addSpacer(20); texto(r, x.s, F.r(10), K.hint); r.addSpacer(); usado += 13; }
-      } else if (modo === "b") { tarea(st, x, "ini"); usado += H.fila; }
-      else { tarea(st, x, "nombre", x.s ? (r => texto(r, x.s, F.r(10), K.hint)) : null); usado += H.fila; }
-    });
+/* pastillas de los bloques, en renglones que quepan a lo ancho (máximo 2) */
+function filasPastillas(bs, ancho) {
+  const filas = [[]]; let usado = 0;
+  bs.forEach(b => {
+    const w = Math.round((b.n.length + String(b.pend).length + 1) * 5.4 + 16) + 4;
+    if (usado + w > ancho && filas[filas.length - 1].length) { filas.push([]); usado = 0; }
+    filas[filas.length - 1].push(b); usado += w;
   });
-  mas(st, fuera);
+  return filas;
 }
-function wHoy(w, d, v) {
-  encabezado(w, d, "por bloque");
-  const gs = grupos(d), alto = ALTO - 2 * PAD - H.enc;
-  if (!gs.length) { linea(w, "Nada marcado. Toca ↑ en una tarea para subirla.", F.r(11.5), K.mut, 2); return; }
-  if (v !== "c") { pintaGrupos(w, gs, alto, v); return; }
-  // dos columnas: reparto los bloques para que queden parejas
-  const colW = Math.floor((ANCHO - 2 * PAD - 10) / 2);
-  const r = w.addStack(); r.layoutHorizontally(); r.topAlignContent(); r.spacing = 10;
-  const a = columna(r, colW), b = columna(r, colW);
-  const total = gs.reduce((s, g) => s + g.it.length + 1, 0); let izq = [], der = [], n = 0;
-  gs.forEach(g => { (n < total / 2 ? izq : der).push(g); n += g.it.length + 1; });
-  pintaGrupos(a, izq, alto, "c"); pintaGrupos(b, der, alto, "c");
+function wHoy(w, d) {
+  const n = d.cortaN != null ? d.cortaN : (d.corta || []).length;
+  cabeza(w, "Importa ahorita", null, n + (d.atrasadas ? " · " + d.atrasadas + (d.atrasadas === 1 ? " atrasada" : " atrasadas") : ""), d);
+  const bs = (d.bloques || []).filter(b => b.pend > 0);
+  const pf = filasPastillas(bs, ANCHO - 2 * PAD).slice(0, 2), altoPies = bs.length ? 8 + pf.length * 20 : 0;
+  let libre = ALTO - 2 * PAD - 28 - altoPies;
+  const gs = grupos(d);
+  if (!gs.length) linea(w, "Nada marcado. Toca ↑ en una tarea para subirla.", F.r(11.5), K.mut, 2);
+  let fuera = 0;
+  gs.forEach(g => {
+    const caben = Math.floor((libre - H.bloque - 4) / H.fila);
+    if (caben < 1) { fuera += g.it.length; return; }
+    const it = g.it.slice(0, caben); fuera += g.it.length - it.length;
+    const alto = H.bloque + it.length * H.fila - 3;
+    const c = conFranja(w, g.c, alto);
+    const t = fila(c); texto(t, g.n, F.sb(11), col(g.tx)); t.addSpacer(); texto(t, String(g.it.length), F.r(10), K.hint);
+    it.forEach(x => renglon(c, x));
+    w.addSpacer(4); libre -= alto + 7;
+  });
+  mas(w, fuera);
+  w.addSpacer();
+  if (!bs.length) return;
+  const l = w.addStack(); l.size = new Size(0, 1); l.backgroundColor = K.linea; l.addSpacer(); w.addSpacer(6);
+  const puestas = pf.reduce((s, f) => s + f.length, 0);
+  pf.forEach((f, i) => {
+    const r = fila(w); r.spacing = 4;
+    f.forEach(b => { const p = pastilla(r, b.n + " " + b.pend, col(b.bg), col(b.tx), F.m(10), 2); p.cornerRadius = 8; p.url = abre("#b=" + encodeURIComponent(b.k)); });
+    if (i === pf.length - 1 && puestas < bs.length) texto(r, "+" + (bs.length - puestas), F.r(10), K.hint);
+    r.addSpacer();
+  });
 }
 
-/* ---------- 2 · bloques que eliges ---------- */
+/* ---------- 2 · uno o dos bloques completos ---------- */
 function buscaBloque(d, nombre) {
   const q = sinAcentos(nombre); if (!q) return null;
   const bs = d.bloques || [];
   return bs.find(b => sinAcentos(b.n) === q) || bs.find(b => sinAcentos(b.n).indexOf(q) === 0) || bs.find(b => sinAcentos(b.n).indexOf(q) >= 0) || null;
 }
-function derFecha(x) {
-  if (!x.f) return null; const c = cuando(x.f);
-  return r => texto(r, c, c === "venció" ? F.m(10) : F.r(10), c === "venció" ? K.dantx : K.hint);
+function tareasDe(b) { const out = []; (b.secs || []).forEach(s => s.ts.forEach(x => { if (!x.d) out.push(x); })); return out; }
+function pintaBloque(st, b, alto, ancho, conTitulo) {
+  const [pronto, luego] = partir(tareasDe(b));
+  let disp = alto - (conTitulo ? H.bloque : 0) - H.mas;
+  const p = pronto.slice(0, Math.max(0, Math.floor(disp / H.fila))); disp -= p.length * H.fila;
+  const raya = p.length && luego.length && disp >= H_RAYA + H.fila;
+  if (raya) disp -= H_RAYA;
+  const l = luego.slice(0, Math.max(0, Math.floor(disp / H.fila)));
+  const fuera = pronto.length + luego.length - p.length - l.length;
+  const usado = (conTitulo ? H.bloque : 0) + (p.length + l.length) * H.fila + (raya ? H_RAYA : 0) + (fuera ? H.mas : 0) - 3;
+  const c = conFranja(st, b.c, usado, ancho);
+  if (conTitulo) { const t = fila(c); texto(t, b.n, F.sb(11.5), col(b.tx)); t.addSpacer(); texto(t, String(b.pend), F.r(10), K.hint); }
+  p.forEach(x => renglon(c, x)); if (raya) rayita(c); l.forEach(x => renglon(c, x));
+  mas(c, fuera);
+  if (!p.length && !l.length) linea(c, "Nada pendiente.", F.r(11), K.mut);
 }
-function pintaSecciones(st, b, secs, alto, modo) {
-  let usado = 0, fuera = 0;
-  secs.forEach(s => {
-    const vivas = s.ts.filter(x => !x.d);
-    if (!vivas.length) return;
-    if (usado + H.sec + H.fila > alto) { fuera += vivas.length; return; }
-    titSeccion(st, s.n, b.bg, b.tx); usado += H.sec;
-    vivas.forEach(x => {
-      if (usado + H.fila > alto - H.mas) { fuera++; return; }
-      tarea(st, x, modo, derFecha(x)); usado += H.fila;
-    });
-  });
-  mas(st, fuera);
-}
-function wBloque(w, d, nombres, v) {
-  const bs = nombres.map(n => buscaBloque(d, n)).filter(Boolean);
-  encabezado(w, d, bs.length > 1 ? "2 bloques" : "bloque");
-  if (!bs.length) { linea(w, "No encontré el bloque «" + nombres.join(", ") + "». Revisa el Parameter.", F.r(11.5), K.mut, 3); return; }
-  const alto = ALTO - 2 * PAD - H.enc;
-  const colW = Math.floor((ANCHO - 2 * PAD - 10) / 2);
-  if (bs.length > 1) {
-    const r = w.addStack(); r.layoutHorizontally(); r.topAlignContent(); r.spacing = 10;
-    bs.slice(0, 2).forEach(b => {
-      const c = columna(r, colW);
-      tituloBloque(c, b.n, b.c, b.tx, String(b.pend));
-      pintaSecciones(c, b, b.secs || [], alto - H.bloque, "ini");
-    });
-    return;
+function wBloque(w, d, nombres) {
+  const bs = nombres.map(n => buscaBloque(d, n)).filter(Boolean).slice(0, 2);
+  if (!bs.length) { cabeza(w, "Bloque", null, "", d); linea(w, "No encontré el bloque «" + nombres.join(", ") + "». Revisa el Parameter.", F.r(11.5), K.mut, 3); return; }
+  const alto = ALTO - 2 * PAD - 28;
+  if (bs.length === 1) {
+    const b = bs[0]; cabeza(w, b.n, col(b.tx), b.pend + (b.sem ? " · " + b.sem + " esta semana" : ""), d);
+    pintaBloque(w, b, alto, 0, false); return;
   }
-  const b = bs[0];
-  tituloBloque(w, b.n, b.c, b.tx, b.pend + " pend.");
-  const secs = b.secs || [];
-  if (v !== "b") { pintaSecciones(w, b, secs, alto - H.bloque, "nombre"); return; }
-  // secciones en dos columnas: las reparto por tamaño
-  const r = w.addStack(); r.layoutHorizontally(); r.topAlignContent(); r.spacing = 10;
-  const a = columna(r, colW), c2 = columna(r, colW);
-  const peso = s => s.ts.filter(x => !x.d).length + 1;
-  const total = secs.reduce((s, x) => s + peso(x), 0); let n = 0; const izq = [], der = [];
-  secs.forEach(s => { (n < total / 2 ? izq : der).push(s); n += peso(s); });
-  pintaSecciones(a, b, izq, alto - H.bloque, "ini"); pintaSecciones(c2, b, der, alto - H.bloque, "ini");
+  cabeza(w, "Tus bloques", null, bs.map(b => b.pend).join(" · "), d);
+  const colW = Math.floor((ANCHO - 2 * PAD - 12) / 2);
+  const r = w.addStack(); r.layoutHorizontally(); r.topAlignContent(); r.spacing = 12;
+  bs.forEach(b => { const c = r.addStack(); c.layoutVertically(); c.size = new Size(colW, 0); pintaBloque(c, b, alto, colW, true); });
 }
 
-/* ---------- 3 · calendario ---------- */
-function eventos(d) { return (d.cal || []).filter(x => dias(x.f) >= 0); }
-/* cuánto mide la lista completa, para repartir el espacio que sobre */
-function altoLista(evs) { const ds = new Set(evs.map(x => x.f)).size; return ds * H.dia + evs.length * H.fila; }
-function pintaLista(st, evs, alto, aire) {
-  let usado = 0, fuera = 0, dia = "";
-  evs.forEach(x => {
-    if (x.f !== dia) {
-      const extra = dia && aire ? aire : 0;
-      if (usado + extra + H.dia + H.fila > alto - H.mas) { fuera++; return; }
-      if (extra) { st.addSpacer(extra); usado += extra; }
-      const d = aFecha(x.f), n = dias(x.f);
-      const lab = (n === 0 ? "hoy · " : n === 1 ? "mañana · " : "") + DIAS[d.getDay()] + " " + d.getDate();
-      tituloDia(st, lab.toUpperCase()); usado += H.dia; dia = x.f;
-    }
-    if (usado + H.fila > alto - H.mas) { fuera++; return; }
-    const r = fila(st);
-    const h = r.addStack(); h.size = new Size(50, 0); texto(h, x.h || "—", F.m(10.5), K.mut); h.addSpacer();
-    punto(r, x.c); texto(r, x.t, F.r(11.5), K.txt); r.addSpacer(); usado += H.fila;
-  });
-  if (!evs.length) linea(st, "Nada programado.", F.r(11.5), K.mut);
-  mas(st, fuera);
+/* ---------- 3 · calendario tipo Apple: las semanas que faltan del mes y la lista de lo que viene ---------- */
+const iso = f => f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0") + "-" + String(f.getDate()).padStart(2, "0");
+function fijosDel(d, f) {
+  const src = d.fijos || {}; const fd = aFecha(f); const hoy = iso(new Date());
+  return (src[fd.getDay()] || []).map((x, i) => ({ ini: x[0], fin: x[1], t: x[2], k: "fijo:" + i }))
+    .filter(x => !(f === hoy && (d.fno || []).indexOf(x.k) >= 0));
 }
-/* el día en ciruela y una línea del mismo color hasta el borde */
+function hora12(m) { const h = Math.floor(m / 60), mi = m % 60; return ((h % 12) || 12) + (mi ? ":" + String(mi).padStart(2, "0") : "") + (h < 12 ? " am" : " pm"); }
+function aMin(h) { const m = String(h || "").match(/(\d+)(?::(\d+))?\s*(a\.?m\.?|p\.?m\.?)?/i); if (!m) return null; let hh = +m[1], mm = m[2] ? +m[2] : 0; const ap = (m[3] || "").toLowerCase().replace(/\./g, ""); if (ap === "pm" && hh < 12) hh += 12; if (ap === "am" && hh === 12) hh = 0; return hh * 60 + mm; }
+function semanas() {
+  const h = hoy0(), lun = new Date(h); lun.setDate(h.getDate() - ((h.getDay() + 6) % 7));
+  const fin = new Date(h.getFullYear(), h.getMonth() + 1, 0); const out = [];
+  for (let s = new Date(lun); s <= fin || out.length < 2; s.setDate(s.getDate() + 7)) { out.push(new Date(s)); if (out.length >= 5) break; }
+  return out;
+}
+function wCal(w, d) {
+  const h = new Date(); cabeza(w, MESES_L[h.getMonth()], K.acctx, "", d);
+  const pts = {}; (d.cal || []).forEach(x => { (pts[x.f] = pts[x.f] || []).push(x.c); });
+  const cw = Math.floor((ANCHO - 2 * PAD) / 7), hoyIso = iso(h), mesHoy = h.getMonth();
+  const cab = centrada(w);
+  ["L", "M", "M", "J", "V", "S", "D"].forEach(x => { const c = cab.addStack(); c.size = new Size(cw, 12); c.centerAlignContent(); texto(c, x, F.m(9.5), K.hint); });
+  const ss = semanas();
+  ss.forEach(s => {
+    const r = centrada(w);
+    for (let j = 0; j < 7; j++) {
+      const f = new Date(s); f.setDate(s.getDate() + j); const fi = iso(f), esHoy = fi === hoyIso;
+      const c = r.addStack(); c.size = new Size(cw, 25); c.layoutVertically(); c.centerAlignContent();
+      const num = c.addStack(); num.size = new Size(18, 18); num.cornerRadius = 9; num.centerAlignContent();
+      if (esHoy) num.backgroundColor = K.acc;
+      texto(num, f.getDate(), esHoy ? F.b(11) : F.r(11), esHoy ? new Color("#FFFFFF") : (f < hoy0() ? K.hint : (f.getMonth() !== mesHoy ? K.mut : K.txt)));
+      const pr = c.addStack(); pr.size = new Size(cw, 5); pr.centerAlignContent(); pr.spacing = 2;
+      [...new Set(pts[fi] || [])].slice(0, 3).forEach(cc => punto(pr, cc, 4));
+    }
+  });
+  w.addSpacer(6);
+  const l = w.addStack(); l.size = new Size(0, 1); l.backgroundColor = K.linea; l.addSpacer(); w.addSpacer(4);
+  // la lista: hoy y lo que sigue, con tus clases en gris
+  let libre = ALTO - 2 * PAD - 28 - 15 - ss.length * 28 - 12, fuera = 0;
+  const ahora = h.getHours() * 60 + h.getMinutes();
+  for (let i = 0; i < 14 && libre > H.dia + H.fila; i++) {
+    const f = new Date(hoy0()); f.setDate(f.getDate() + i); const fi = iso(f);
+    const evs = (d.cal || []).filter(x => x.f === fi).map(x => ({ m: aMin(x.h), t: x.t, c: x.c, i: x.i }))
+      .concat(fijosDel(d, fi).filter(x => !(i === 0 && x.fin <= ahora)).map(x => ({ m: x.ini, t: x.t, fijo: 1 })))
+      .sort((a, b) => (a.m == null ? -1 : a.m) - (b.m == null ? -1 : b.m));
+    if (!evs.some(x => !x.fijo) && i > 0) continue;   // días solo con clases: no los enseño
+    if (!evs.length) continue;
+    tituloDia(w, (i === 0 ? "HOY" : i === 1 ? "MAÑANA" : DIAS[f.getDay()].toUpperCase() + " " + f.getDate())); libre -= H.dia;
+    evs.forEach(x => {
+      if (libre < H.fila + H.mas) { if (!x.fijo) fuera++; return; }
+      const r = fila(w); const u = abreTarea(x.i); if (u) r.url = u;
+      const hh = r.addStack(); hh.size = new Size(40, 0); texto(hh, x.m == null ? "todo" : hora12(x.m).replace(":00", ""), F.r(10), K.mut); hh.addSpacer();
+      const b = r.addStack(); b.size = new Size(3, 12); b.cornerRadius = 1.5; b.backgroundColor = x.fijo ? K.linea : col(x.c);
+      texto(r, x.t, F.r(11.5), x.fijo ? K.mut : K.txt); r.addSpacer(); libre -= H.fila;
+    });
+  }
+  mas(w, fuera);
+}
+/* el día y una línea del color fuerte hasta el borde */
 function tituloDia(st, lab) {
   const r = fila(st); r.spacing = 8;
   texto(r, lab, F.b(10.5), K.ciruelatx);
@@ -263,85 +293,24 @@ function tituloDia(st, lab) {
 }
 /* una fila centrada a lo ancho */
 function centrada(st) { const r = st.addStack(); r.layoutHorizontally(); r.addSpacer(); const c = r.addStack(); c.layoutHorizontally(); r.addSpacer(); return c; }
-function semanasDelMes() { const h = new Date(), ini = (new Date(h.getFullYear(), h.getMonth(), 1).getDay() + 6) % 7; return Math.ceil((ini + new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate()) / 7); }
-function altoMes(extra) { return (16 + 3) + (12 + 3) + semanasDelMes() * (17 + extra + 3); }
-function mes(st, d, extra) {
-  const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth();
-  const puntos = {};
-  (d.cal || []).forEach(x => { const f = aFecha(x.f); if (f.getFullYear() === y && f.getMonth() === m) (puntos[f.getDate()] = puntos[f.getDate()] || []).push(x.c); });
-  const cw = Math.floor((ANCHO - 2 * PAD) / 7), rh = 17 + extra;
-  texto(centrada(st), MESES_L[m], F.b(12), K.txt);
-  const cab = centrada(st);
-  ["L", "M", "M", "J", "V", "S", "D"].forEach(x => { const c = cab.addStack(); c.size = new Size(cw, 12); c.centerAlignContent(); texto(c, x, F.m(9.5), K.hint); });
-  const ini = (new Date(y, m, 1).getDay() + 6) % 7, fin = new Date(y, m + 1, 0).getDate();
-  for (let i = 0; i < ini + fin; i += 7) {
-    const r = centrada(st);
-    for (let j = 0; j < 7; j++) {
-      const n = i + j - ini + 1, c = r.addStack(); c.size = new Size(cw, rh); c.layoutVertically(); c.centerAlignContent();
-      if (n < 1 || n > fin) continue;
-      const esHoy = n === hoy.getDate();
-      const num = c.addStack(); num.size = new Size(Math.min(cw - 6, 30), 13 + Math.min(extra, 4)); num.centerAlignContent(); num.cornerRadius = 5;
-      if (esHoy) num.backgroundColor = K.accbg;
-      texto(num, n, esHoy ? F.b(10.5) : F.r(10.5), esHoy ? K.acctx : K.txt);
-      const pr = c.addStack(); pr.size = new Size(cw, 4); pr.centerAlignContent(); pr.spacing = 1.5;
-      (puntos[n] || []).slice(0, 3).forEach(cc => punto(pr, cc, 3));
-    }
-  }
-  return altoMes(extra);
-}
-function tira(st, d) {
-  const cw = Math.floor((ANCHO - 2 * PAD - 18) / 7);
-  const r = centrada(st); r.spacing = 3;
-  for (let i = 0; i < 7; i++) {
-    const f = new Date(); f.setDate(f.getDate() + i);
-    const iso = f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0") + "-" + String(f.getDate()).padStart(2, "0");
-    const n = (d.cal || []).filter(x => x.f === iso).length;
-    const c = r.addStack(); c.size = new Size(cw, 44); c.layoutVertically(); c.centerAlignContent(); c.cornerRadius = 7;
-    c.borderWidth = 1; c.borderColor = i === 0 ? K.acc : K.linea; if (i === 0) c.backgroundColor = K.accbg;
-    const a = c.addStack(); a.size = new Size(cw, 11); a.centerAlignContent(); texto(a, DIAS[f.getDay()], F.r(9.5), K.mut);
-    const b = c.addStack(); b.size = new Size(cw, 17); b.centerAlignContent(); texto(b, f.getDate(), F.b(14), i === 0 ? K.acctx : K.txt);
-    const p = c.addStack(); p.size = new Size(cw, 6); p.centerAlignContent(); p.spacing = 2;
-    for (let k = 0; k < Math.min(n, 3); k++) punto(p, "#8A4529", 4);
-  }
-  return 44 + 3;
-}
-function wCal(w, d, v) {
-  encabezado(w, d, "calendario");
-  const evs = eventos(d), GAP = 12;
-  let alto = ALTO - 2 * PAD - H.enc;
-  const lista = Math.max(altoLista(evs), H.fila);
-  if (v === "a") {
-    // si la lista es corta, el calendario crece para no dejar hueco abajo
-    const sobra = alto - altoMes(0) - GAP - 3 - lista - H.mas;
-    const extra = sobra > 0 ? Math.min(10, Math.floor(sobra * 0.7 / semanasDelMes())) : 0;
-    alto -= mes(w, d, extra);
-  } else if (v === "b") alto -= tira(w, d);
-  if (v !== "c") { w.addSpacer(GAP); alto -= GAP + 3; }
-  // lo que todavía sobre se reparte entre los días de la lista
-  const dias_ = new Set(evs.map(x => x.f)).size;
-  const resto = alto - lista - H.mas;
-  const aire = resto > 0 && dias_ > 1 ? Math.min(8, Math.floor(resto / (dias_ - 1))) : 0;
-  pintaLista(w, evs, alto, aire);
-}
 
 /* ---------- pantalla de bloqueo: solo el número ---------- */
 function wBloqueo(w, d) {
   const n = d.cortaN != null ? d.cortaN : (d.corta || []).length;
   if (FAM === "accessoryCircular") { const x = w.addText(String(n)); x.font = F.b(22); x.centerAlignText(); return; }
   const x = w.addText("Importa ahorita: " + n); x.font = F.sb(14);
-  if (d.atrasadas) { const y = w.addText(d.atrasadas + " vencidas"); y.font = F.r(12); }
+  if (d.atrasadas) { const y = w.addText(d.atrasadas + " atrasadas"); y.font = F.r(12); }
 }
 
 /* ---------- arranque ---------- */
 const raw = (typeof args !== "undefined" && args.widgetParameter ? String(args.widgetParameter) : "").trim();
 function queWidget(p) {
+  if (!p) return { tipo: "hoy" };
   const m = p.match(/^\s*(hoy|cal|bloques|bloque2|bloque)\s*(?::\s*(.*))?$/i);
-  if (!p) return { tipo: "hoy", v: "a" };
-  if (!m) { const ns = p.split(","); return { tipo: "bloque", v: ns.length > 1 ? "c" : "a", nombres: ns }; }
+  if (!m) return { tipo: "bloque", nombres: p.split(",") };
   const tipo = m[1].toLowerCase(), resto = (m[2] || "").trim();
-  if (tipo === "hoy" || tipo === "cal") return { tipo, v: (resto.toLowerCase().charAt(0) || "a") };
-  if (tipo === "bloques") return { tipo: "bloque", v: "c", nombres: resto.split(",") };
-  return { tipo: "bloque", v: tipo === "bloque2" ? "b" : "a", nombres: [resto] };
+  if (tipo === "hoy" || tipo === "cal") return { tipo };   // hoy:b, cal:c… de antes ya son lo mismo
+  return { tipo: "bloque", nombres: resto.split(",") };
 }
 
 const d = await traer();
@@ -359,13 +328,13 @@ if (!d) {
   wBloqueo(w, d);
 } else {
   const q = queWidget(raw);
-  if (q.tipo === "cal") wCal(w, d, q.v);
-  else if (q.tipo === "bloque") wBloque(w, d, q.nombres, q.v);
-  else wHoy(w, d, q.v);
-  w.addSpacer(); // todo pegado arriba; si sobra espacio, sobra abajo
+  if (q.tipo === "cal") wCal(w, d);
+  else if (q.tipo === "bloque") wBloque(w, d, q.nombres);
+  else wHoy(w, d);
+  if (q.tipo !== "hoy") w.addSpacer(); // todo pegado arriba (en Hoy las pastillas ya van hasta abajo)
 }
 
-// tocar el widget abre la agenda (w.url). Correrlo en Scriptable enseña cómo se ve.
+// tocar una tarea abre esa tarea; tocar el ＋ abre «nueva tarea»; lo demás abre la agenda.
 if (config.runsInWidget) Script.setWidget(w);
 else await w.presentLarge();
 Script.complete();
