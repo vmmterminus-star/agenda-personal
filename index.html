@@ -590,6 +590,11 @@ body.modo-now .ahnum{font-size:24px}
 .mdpl summary::before{content:"▸ ";color:var(--hint)}
 .mdpl[open] summary::before{content:"▾ "}
 .mdpl[open] summary{margin-bottom:8px}
+.bzp{display:flex;gap:8px;font-size:12px;line-height:1.45;margin:8px 0 3px}
+.bzp span b{font-weight:600;color:var(--txt)}
+.bzp>b{flex:none;width:18px;height:18px;border-radius:9px;background:var(--accbg);color:var(--acctx);text-align:center;font-size:11px;line-height:19px}
+.bzc{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin:3px 0 3px 26px;font-size:12px;font-weight:600}
+.bzc em{flex-basis:100%;font-style:normal;font-weight:400;font-size:11px;color:var(--mut);line-height:1.4}
 .mdauto{font-size:10.5px;color:var(--hint);text-align:center;margin-top:6px}
 /* ── calendario ── */
 body.modo-cal #page{display:block;max-width:1250px}
@@ -2758,6 +2763,45 @@ function renderCal(){const box=document.getElementById('calView');if(!box||viewM
  box.innerHTML=`<div class="pnl calp"><div class="calh"><b>${esc(titulo.charAt(0).toUpperCase()+titulo.slice(1))}</b><div class="cseg">${seg}</div>`+
    `<div class="cnav"><button class="mini" onclick="calNav(-1)">‹</button><button class="mini" onclick="calHoy()">Hoy</button><button class="mini" onclick="calNav(1)">›</button></div></div>${cuerpo}</div>`;}
 /* =======================================================================
+   BUZÓN DE VOZ — el atajo del iPhone deja filas «<código>__buzon__<fecha>» con {t:texto}.
+   Al abrir la agenda se BORRAN y se reciben en el mismo paso (return=representation):
+   solo el aparato que las borra las agrega, así no salen dos veces. Caen en Sin clasificar y en «importa».
+   ======================================================================= */
+let buzonOcupado=false;
+async function buzonRevisar(){
+ if(!syncCode||buzonOcupado)return;buzonOcupado=true;
+ try{
+   const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?code=like."+encodeURIComponent(syncCode+"__buzon__")+"*",
+     {method:"DELETE",headers:Object.assign({},SUPA_HDR,{Prefer:"return=representation"})});
+   if(!r.ok)return;
+   const filas=(await r.json()).filter(f=>f&&f.code&&f.code.indexOf(syncCode+"__buzon__")===0).sort((a,b)=>a.code<b.code?-1:1);
+   const textos=[];
+   filas.forEach((f,j)=>{const t=String((f.data&&f.data.t)||'').trim();if(!t)return;
+     const tx=t.charAt(0).toUpperCase()+t.slice(1);
+     const id="inbox|c|"+Date.now()+j;custom.push({id,area:"inbox",sg:"Por clasificar",t:tx});
+     if(!areaOrder.inbox)areaOrder.inbox=[];areaOrder.inbox.push(id);short.push({id,at:todayStr()});textos.push(tx);});
+   if(textos.length){save();render();escAviso('🎙 '+(textos.length===1?textos[0]:textos.length+' tareas de tu atajo')+' · en importa');}
+ }catch(e){}finally{buzonOcupado=false;}}
+/* panel del menú ⋯: lo que hay que pegar en el atajo (el código se pone aquí, desde este aparato; nunca va en la página) */
+let bzOpen=false;
+function bzPanel(){
+ const paso=(n,t)=>`<div class="bzp"><b>${n}</b><span>${t}</span></div>`;
+ const copia=(lab,val,nota)=>`<div class="bzc"><span>${lab}</span><button class="mini" data-v="${esc(val)}" onclick="copiarTexto(this.dataset.v,'✓ Copiado: ${esc(lab)}')">copiar</button>${nota?`<em>${nota}</em>`:''}</div>`;
+ const cuerpo=!syncCode?`<div class="lcempty">Primero conecta tu código en Respaldo (aquí arriba). El atajo lo necesita.</div>`:
+   `<div style="font-size:11.5px;color:var(--mut);line-height:1.5;margin-bottom:8px">Dices la tarea y cae en <b style="color:var(--txt)">Sin clasificar</b> y en <b style="color:var(--txt)">Importa ahorita</b> la próxima vez que abras la agenda. Se arma una sola vez en la app <b style="color:var(--txt)">Atajos</b>:</div>`+
+   paso('1','Atajos → ＋ → nómbralo <b>Apunta en mi agenda</b> (así se lo dices a Siri).')+
+   paso('2','Agrega <b>Dictar texto</b>. Idioma: Español (México).')+
+   paso('3','Agrega <b>Obtener contenido de URL</b> y pega en la URL:')+copia('URL','https://suwhvvxihzsfbbrcocbx.supabase.co/rest/v1/agenda_sync')+
+   paso('4','Toca la flechita ▸ → Método: <b>POST</b>. En <b>Encabezados</b> agrega estos dos (a la izquierda el nombre, a la derecha lo que copias):')+
+   copia('apikey',SUPA_KEY,'nombre: apikey')+copia('Authorization','Bearer '+SUPA_KEY,'nombre: Authorization')+
+   paso('5','En <b>Cuerpo de la solicitud</b> elige <b>JSON</b> y agrega:')+
+   copia('code',syncCode+'__buzon__','campo de Texto llamado code: pega esto y, pegado al final, la variable <b>Fecha actual</b> (tócala → Formato: ISO 8601, con hora)')+
+   `<div class="bzc"><span>data</span><em>campo de <b>Diccionario</b> llamado data; adentro, un campo de Texto llamado <b>t</b> con la variable <b>Texto dictado</b></em></div>`+
+   paso('6','Agrega <b>Mostrar notificación</b>: «✓ Apuntado: <i>Texto dictado</i>».')+
+   `<div style="font-size:11px;color:var(--mut);line-height:1.5;margin-top:6px">Tu código va solo dentro del atajo de tu iPhone. No lo compartas.</div>`;
+ return `<div class="pnl"><div class="pnlh" onclick="bzOpen=!bzOpen;pintaMenu()"><span class="ph" style="background:var(--accbg);color:var(--acctx)">Atajo de voz</span><span class="ar">${bzOpen?'▾':'▸'}</span></div>`+
+  (bzOpen?cuerpo:`<div style="font-size:11.5px;color:var(--mut);line-height:1.5">Apuntar tareas hablándole a Siri. Los pasos y lo que hay que pegar.</div>`)+`</div>`;}
+/* =======================================================================
    MENÚ ⋯
    ======================================================================= */
 function openMenu(){menuOpen=true;pintaMenu();document.getElementById('menuBg').style.display='flex';}
@@ -2794,7 +2838,7 @@ function pintaMenu(){
   `<div class="frow"><input id="escCodeInput" placeholder="código de la agenda escolar" value="${esc(escCode)}" style="font-size:13px;border:1px solid var(--line2);border-radius:9px;padding:7px 10px;outline:none;width:100%"><button class="mini" onclick="escConectar()">Conectar</button></div>`+
   `<div class="msg" id="escStatus">${escCode?(escActiva()?'✓ '+escTareas().length+' tareas escolares':'Conectada'):''}</div></div>`+
 
-  wgPanel()+
+  wgPanel()+bzPanel()+
 
   tgPanel()+
 
@@ -2990,8 +3034,9 @@ if(syncCode&&!baseGet())baseSet(localBlob());
 if(syncCode){syncCycle();setInterval(syncCycle,15000);}
 /* agenda escolar: se lee al abrir, cada minuto y al volver a la app */
 if(escCode){escCargar();}
-setInterval(()=>{if(escCode)escCargar();},60000);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&escCode)escCargar();});
+setInterval(()=>{if(escCode)escCargar();buzonRevisar();},60000);
+buzonRevisar();
+document.addEventListener("visibilitychange",()=>{if(document.hidden)return;if(escCode)escCargar();buzonRevisar();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&syncCode)syncCycle();});
 window.addEventListener('focus',()=>{if(syncCode)syncCycle();});
 </script>
