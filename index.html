@@ -946,7 +946,7 @@ let cloudBusy=false,pushTimer=null,dirty=false;
    el celular (que suele tener todo plegado) le cerraría los bloques a la compu. */
 const UIKEYS=['agenda_synccode','agenda_remote_ts','agenda_open_v1','agenda_view_v1',
               'agenda_panels_v1','agenda_archopen','agenda_width_v1','agenda_focusopen','agenda_focuscol',
-              'agenda_shortview','agenda_sideblk_v1','agenda_syncbase','agenda_calvista'];
+              'agenda_shortview','agenda_sideblk_v1','agenda_syncbase','agenda_calvista','agenda_buzonpend'];
 function esUI(k){return UIKEYS.indexOf(k)>=0;}
 function localBlob(){const o={};Object.keys(localStorage).forEach(k=>{if(k.indexOf('agenda_')===0&&!esUI(k))o[k]=localStorage.getItem(k);});return o;}
 function schedulePush(){if(!syncCode)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>syncCycle(),1500);}
@@ -1071,7 +1071,7 @@ async function doPush(){const ts=new Date().toISOString();const n=cambios;const 
  let wErr="";
  try{body.push({code:syncCode+"__widget",data:widgetBlob(),updated_at:ts});}catch(e){wErr=' · ⚠ el widget no se armó: '+(e.message||e);}
  const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?on_conflict=code",{method:"POST",headers:Object.assign({},SUPA_HDR,{Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(body)});
- if(r.ok){localStorage.setItem('agenda_remote_ts',ts);baseSet(blob);widgetTs=Date.now();
+ if(r.ok){localStorage.setItem('agenda_remote_ts',ts);baseSet(blob);widgetTs=Date.now();buzonLimpiaPend();
    dirty=(cambios!==n);if(dirty)schedulePush();
    setSyncStatus('✓ guardado en la nube'+wErr);return true;}
  setSyncStatus('error al guardar ('+r.status+')');return false;}
@@ -1115,6 +1115,7 @@ async function syncCycle(){
    else{setSyncStatus('✓ al día');if(Date.now()-widgetTs>15*60*1000)pushWidget();}
  }catch(e){setSyncStatus('sin conexión');}
  cloudBusy=false;
+ buzonRevisar();   // ya sincronizado: ahora sí, lo del atajo de voz
 }
 async function syncNow(){setSyncStatus('sincronizando…');await syncCycle();}
 async function forcePull(){if(!syncCode){setSyncStatus('Escribe tu código y conecta primero.');return;}if(offlineFileWarn())return;
@@ -1511,10 +1512,11 @@ function renderShort(){
  const vacio=short.length?"":`<div class="lcempty">Aquí va lo que de verdad importa ahorita. Escribe cualquier cosa arriba, o toca la ↑ de una tarea.</div>`;
  const sw=VISTAS.map(([v,l])=>`<button class="vb ${shortView===v?'on':''}" onclick="setShortView('${v}')">${l}</button>`).join('');
  const vl=(VISTAS.find(x=>x[0]===shortView)||VISTAS[0])[1];
+ const yaEscrito=(document.getElementById('cortaInput')||{}).value||'';   // lo que llevabas escrito no se pierde al repintar
  box.innerHTML=`<div class="pnlh" style="cursor:default"><span class="ph" style="background:var(--accbg);color:var(--acctx)">Lo que importa ahorita</span><span class="n">${short.length}</span>`+
   `<button class="mini" style="margin-left:auto" title="Otras formas de ver esta lista" onclick="vistasAb=!vistasAb;renderShort()">vista: ${esc(vl)} ${vistasAb?'▴':'▾'}</button></div>`+
   (vistasAb?`<div class="vsw">${sw}</div>`:'')+
-  `<input class="add" id="cortaInput" placeholder="＋ escribe lo que sea y Enter" onkeydown="cortaAdd(event)" style="margin-bottom:4px">`+
+  `<input class="add" id="cortaInput" value="${esc(yaEscrito)}" placeholder="＋ escribe lo que sea y Enter" onkeydown="cortaAdd(event)" style="margin-bottom:4px">`+
   rows+vacio+aviso;
 }
 
@@ -1603,10 +1605,12 @@ async function escCargar(){
    if(!w.length){escEstado('No encontré ese código en tu agenda escolar.');return;}
    const d=w[0].data||{},hechas={};
    (h||[]).forEach(r=>{const x=r.data||{};if(x.i!=null)hechas[x.i]={st:x.st,ts:x.ts};});
+   const antes=JSON.stringify([escCache.tar||null,escCache.hechas||null]);
    escCache={tar:d.tar||[],app:d.app||'',hechas,ts:Date.now()};
    Object.keys(escOptim).forEach(i=>{const o=escOptim[i],srv=hechas[i];if(srv&&srv.ts>=o.ts)delete escOptim[i];});
    try{localStorage.setItem('agenda_esccache',JSON.stringify(escCache));}catch(e){}
-   escEstado('✓ '+escTareas().length+' tareas escolares');render();
+   escEstado('✓ '+escTareas().length+' tareas escolares');
+   if(JSON.stringify([escCache.tar,escCache.hechas])!==antes)renderFondo();   // solo si cambió algo, y sin borrarte lo que escribes
  }catch(e){escEstado('Sin conexión con la agenda escolar.');}}
 function escEstado(t){const el=document.getElementById('escStatus');if(el)el.textContent=t;}
 function escConectar(){const v=(document.getElementById('escCodeInput').value||'').trim();
@@ -2768,20 +2772,32 @@ function renderCal(){const box=document.getElementById('calView');if(!box||viewM
    solo el aparato que las borra las agrega, así no salen dos veces. Caen en Sin clasificar y en «importa».
    ======================================================================= */
 let buzonOcupado=false;
+/* lo que llegó del buzón se apunta también en «agenda_buzonpend» (de este aparato, no se sincroniza y sobrevive a una recarga):
+   si la nube recarga la página antes de subirlo, al volver a abrir se vuelve a poner. Se limpia cuando ya subió. */
+function buzonPend(){try{return JSON.parse(localStorage.getItem('agenda_buzonpend')||'[]');}catch(e){return [];}}
+function buzonSetPend(l){try{if(l.length)localStorage.setItem('agenda_buzonpend',JSON.stringify(l));else localStorage.removeItem('agenda_buzonpend');}catch(e){}}
+const buzonEnSesion=new Set();   /* lo del buzón que ya está en la agenda de esta pestaña */
+function buzonAplicaPend(){let n=0;
+ buzonPend().forEach(p=>{buzonEnSesion.add(p.id);if(custom.some(c=>c.id===p.id))return;
+   custom.push({id:p.id,area:"inbox",sg:"Por clasificar",t:p.t});if(!areaOrder.inbox)areaOrder.inbox=[];areaOrder.inbox.push(p.id);
+   if(!enCorta(p.id))short.push({id:p.id,at:p.at||todayStr()});n++;});
+ return n;}
+/* ya subió a la nube: lo que está en la agenda se quita de pendientes */
+function buzonLimpiaPend(){const l=buzonPend();if(!l.length)return;buzonSetPend(l.filter(p=>!buzonEnSesion.has(p.id)));}
 async function buzonRevisar(){
- if(!syncCode||buzonOcupado)return;buzonOcupado=true;
+ if(!syncCode||buzonOcupado||cloudBusy)return;buzonOcupado=true;cloudBusy=true;   // no al mismo tiempo que la sincronización
  try{
    const r=await fetch(SUPA_URL+"/rest/v1/agenda_sync?code=like."+encodeURIComponent(syncCode+"__buzon__")+"*",
      {method:"DELETE",headers:Object.assign({},SUPA_HDR,{Prefer:"return=representation"})});
    if(!r.ok)return;
    const filas=(await r.json()).filter(f=>f&&f.code&&f.code.indexOf(syncCode+"__buzon__")===0).sort((a,b)=>a.code<b.code?-1:1);
-   const textos=[];
+   const nuevos=[];
    filas.forEach((f,j)=>{const t=String((f.data&&f.data.t)||'').trim();if(!t)return;
-     const tx=t.charAt(0).toUpperCase()+t.slice(1);
-     const id="inbox|c|"+Date.now()+j;custom.push({id,area:"inbox",sg:"Por clasificar",t:tx});
-     if(!areaOrder.inbox)areaOrder.inbox=[];areaOrder.inbox.push(id);short.push({id,at:todayStr()});textos.push(tx);});
-   if(textos.length){save();render();escAviso('🎙 '+(textos.length===1?textos[0]:textos.length+' tareas de tu atajo')+' · en importa');}
- }catch(e){}finally{buzonOcupado=false;}}
+     nuevos.push({id:"inbox|c|"+Date.now()+j,t:t.charAt(0).toUpperCase()+t.slice(1),at:todayStr()});});
+   if(!nuevos.length)return;
+   buzonSetPend(buzonPend().concat(nuevos));buzonAplicaPend();save();renderFondo();
+   escAviso('🎙 '+(nuevos.length===1?nuevos[0].t:nuevos.length+' tareas de tu atajo')+' · en importa');
+ }catch(e){}finally{buzonOcupado=false;cloudBusy=false;}}
 /* panel del menú ⋯: lo que hay que pegar en el atajo (el código se pone aquí, desde este aparato; nunca va en la página) */
 let bzOpen=false;
 function bzPanel(){
@@ -3020,11 +3036,17 @@ function setMode(m){viewMode=m;
  window.scrollTo(0,0);}
 function renderNow(){if(viewMode!=="now")return;renderCierre();renderRepaso();renderTodos();}
 function renderTodo(){if(viewMode!=='all')return;renderGrid();renderHidden();renderTodos();renderRec();renderSideBlk();renderDeleg();renderArch();}
+/* lo que se repinta solo (agenda escolar, buzón): si estás escribiendo, espera a que termines para no borrarte el texto */
+let renderPend=false;
+function escribiendo(){const a=document.activeElement;return !!(a&&(['INPUT','TEXTAREA','SELECT'].includes(a.tagName)||a.isContentEditable)&&!['checkbox','radio','button'].includes(a.type));}
+function renderFondo(){if(escribiendo()){renderPend=true;return;}render();}
+document.addEventListener('focusout',()=>setTimeout(()=>{if(renderPend&&!escribiendo()){renderPend=false;render();}},300));
 function render(){TKCACHE=null;tgWidth();renderAhora();renderShort();renderFoco();renderNow();renderTodo();renderMiDia();renderCal();}
 
 /* arranque */
 document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 migrar();
+if(buzonAplicaPend())save();   // lo del atajo que no alcanzó a subir antes de una recarga
 setMode(viewMode);
 abrirDeHash();
 setInterval(()=>{if(viewMode==='now')renderCd();},60000);
